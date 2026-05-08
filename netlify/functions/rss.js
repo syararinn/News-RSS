@@ -11,7 +11,6 @@ exports.handler = async function(event) {
     const res = await fetch(url);
     const xml = await res.text();
 
-    // XMLをパースして記事を抽出
     const items = [];
     const itemRegex = /<item>([\s\S]*?)<\/item>/g;
     let match;
@@ -24,9 +23,9 @@ exports.handler = async function(event) {
                     block.match(/href="(https?[^"]+)"/)?.[1] || '';
       const pub   = block.match(/<pubDate>(.*?)<\/pubDate>/)?.[1] || '';
 
-      // --- 追加した除外設定 ---
-      // キーワードが「公明党」で、かつリンクに「komei.or.jp」が含まれている場合はスキップする
-      if (keyword === '公明党' && link.includes('komei.or.jp')) {
+      // --- 修正した除外設定 ---
+      // リンクではなく「タイトル」にサイト名が含まれているかチェックする
+      if (keyword === '公明党' && (title.includes('komei.or.jp') || title.includes('公明新聞'))) {
         continue;
       }
       // ------------------------
@@ -36,17 +35,10 @@ exports.handler = async function(event) {
 
     return {
       statusCode: 200,
-      headers: {
-        'Content-Type': 'application/json',
-        'Access-Control-Allow-Origin': '*'
-      },
+      headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' },
       body: JSON.stringify(items)
     };
   } catch (e) {
-    return {
-      statusCode: 500,
-      headers: { 'Access-Control-Allow-Origin': '*' },
-      body: JSON.stringify({ error: e.message })
-    };
+    return { statusCode: 500, headers: { 'Access-Control-Allow-Origin': '*' }, body: JSON.stringify({ error: e.message }) };
   }
 };
