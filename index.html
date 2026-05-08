@@ -245,24 +245,28 @@ function setStatus(text, cls) {
   el.textContent = text;
   el.className = cls || '';
 }
-
 async function fetchOneKeyword(kw, count) {
-  const url = `https://news.google.com/rss/search?q=${encodeURIComponent(kw)}&hl=ja&gl=JP&ceid=JP:ja`;
-  const proxyUrl = `https://api.allorigins.win/get?url=${encodeURIComponent(url)}`;
-  const res = await fetch(proxyUrl);
-  const data = await res.json();
-  const parser = new DOMParser();
-  const xml = parser.parseFromString(data.contents, 'text/xml');
-  const items = Array.from(xml.querySelectorAll('item')).slice(0, count);
+  // 自分自身のNetlify Function（rss.js）を呼び出す
+  const url = `/.netlify/functions/rss?keyword=${encodeURIComponent(kw)}&count=${count}`;
+  const res = await fetch(url);
+  
+  if (!res.ok) {
+    throw new Error('データの取得に失敗しました');
+  }
+
+  // rss.js はすでに整理されたJSONデータを返してくれるので、そのまま受け取る
+  const items = await res.json();
+  
   return items.map(item => ({
     keyword: kw,
     keywordIndex: keywords.indexOf(kw),
-    title: item.querySelector('title')?.textContent || '',
-    link: item.querySelector('link')?.textContent || '',
-    published: item.querySelector('pubDate')?.textContent || '',
-    dt: new Date(item.querySelector('pubDate')?.textContent || 0)
+    title: item.title,
+    link: item.link,
+    published: item.published,
+    dt: new Date(item.published || 0)
   }));
 }
+
 
 async function fetchNews() {
   if (!keywords.length) { setStatus('キーワードを追加してください', 'err'); return; }
