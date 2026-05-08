@@ -246,15 +246,14 @@ function setStatus(text, cls) {
   el.className = cls || '';
 }
 async function fetchOneKeyword(kw, count) {
-  // 自分自身のNetlify Function（rss.js）を呼び出す
-  const url = `/.netlify/functions/rss?keyword=${encodeURIComponent(kw)}&count=${count}`;
+  // あなたのアプリの絶対URLを指定するので、PCからテストしても動きます！
+  const url = `https://monumental-piroshki-d8aafb.netlify.app/.netlify/functions/rss?keyword=${encodeURIComponent(kw)}&count=${count}`;
   const res = await fetch(url);
   
   if (!res.ok) {
     throw new Error('データの取得に失敗しました');
   }
 
-  // rss.js はすでに整理されたJSONデータを返してくれるので、そのまま受け取る
   const items = await res.json();
   
   return items.map(item => ({
