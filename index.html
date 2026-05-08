@@ -1,0 +1,340 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>政治ニュース収集アプリ</title>
+  <style>
+    :root {
+      --bg: #f5f4f0;
+      --surface: #ffffff;
+      --border: #e2e0d8;
+      --text: #1a1a18;
+      --muted: #6b6b66;
+      --accent: #1a5c38;
+      --accent-light: #e8f2ec;
+      --accent-mid: #2d7a4f;
+      --tag-bg: #eef7f2;
+      --tag-border: #b5d9c5;
+      --tag-text: #1a5c38;
+      --warn: #c0392b;
+      --warn-bg: #fdf0ef;
+      --link: #1a5c38;
+      --row-hover: #f9f8f5;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: 'Hiragino Kaku Gothic ProN', 'Noto Sans JP', sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      padding: 0 0 4rem;
+    }
+    header {
+      background: var(--accent);
+      color: #fff;
+      padding: 1.25rem 1.5rem;
+      display: flex;
+      align-items: baseline;
+      gap: 1rem;
+      flex-wrap: wrap;
+    }
+    header h1 { font-size: 1.1rem; font-weight: 600; letter-spacing: 0.02em; }
+    header p { font-size: 0.75rem; opacity: 0.75; }
+    main { max-width: 900px; margin: 0 auto; padding: 1.5rem 1rem; }
+
+    .card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 1.25rem;
+      margin-bottom: 1rem;
+    }
+    .card-title {
+      font-size: 0.75rem;
+      font-weight: 600;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      margin-bottom: 0.75rem;
+    }
+
+    /* chips */
+    #chips { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 0.75rem; }
+    .chip {
+      display: inline-flex; align-items: center; gap: 5px;
+      background: var(--tag-bg); color: var(--tag-text);
+      border: 1px solid var(--tag-border);
+      font-size: 0.8rem; padding: 4px 10px; border-radius: 20px;
+      cursor: default;
+    }
+    .chip-del {
+      background: none; border: none; color: var(--tag-text);
+      font-size: 1rem; line-height: 1; cursor: pointer; padding: 0;
+      opacity: 0.6;
+    }
+    .chip-del:hover { opacity: 1; }
+
+    /* add row */
+    .add-row { display: flex; gap: 8px; }
+    .add-row input {
+      flex: 1; border: 1px solid var(--border); border-radius: 6px;
+      padding: 7px 12px; font-size: 0.875rem; color: var(--text);
+      background: var(--bg); outline: none;
+    }
+    .add-row input:focus { border-color: var(--accent-mid); }
+    .btn {
+      background: var(--accent); color: #fff;
+      border: none; border-radius: 6px;
+      padding: 7px 18px; font-size: 0.875rem; cursor: pointer;
+      white-space: nowrap; font-weight: 500;
+      transition: background 0.15s;
+    }
+    .btn:hover { background: var(--accent-mid); }
+    .btn:disabled { opacity: 0.5; cursor: not-allowed; }
+    .btn-outline {
+      background: none; color: var(--accent);
+      border: 1px solid var(--tag-border);
+      border-radius: 6px; padding: 7px 18px;
+      font-size: 0.875rem; cursor: pointer; font-weight: 500;
+      transition: background 0.15s;
+    }
+    .btn-outline:hover { background: var(--accent-light); }
+
+    /* controls row */
+    .controls {
+      display: flex; gap: 12px; align-items: center;
+      flex-wrap: wrap; margin-bottom: 1.25rem;
+    }
+    .controls label { font-size: 0.8rem; color: var(--muted); white-space: nowrap; }
+    .controls select {
+      border: 1px solid var(--border); border-radius: 6px;
+      padding: 6px 10px; font-size: 0.8rem;
+      background: var(--surface); color: var(--text); outline: none;
+    }
+    .controls select:focus { border-color: var(--accent-mid); }
+
+    /* status */
+    #status {
+      font-size: 0.78rem; padding: 3px 10px;
+      border-radius: 20px; margin-left: auto;
+      background: #f0efeb; color: var(--muted);
+      border: 1px solid var(--border);
+      white-space: nowrap;
+    }
+    #status.ok   { background: var(--accent-light); color: var(--accent); border-color: var(--tag-border); }
+    #status.busy { background: #fff9e6; color: #8a6200; border-color: #f0d98a; }
+    #status.err  { background: var(--warn-bg); color: var(--warn); border-color: #f5bbb7; }
+
+    /* table */
+    .table-wrap {
+      background: var(--surface);
+      border: 1px solid var(--border); border-radius: 10px;
+      overflow: hidden; overflow-x: auto;
+    }
+    table { width: 100%; border-collapse: collapse; font-size: 0.85rem; }
+    thead th {
+      background: #f9f8f5; font-size: 0.72rem; font-weight: 600;
+      color: var(--muted); text-transform: uppercase; letter-spacing: 0.05em;
+      padding: 10px 12px; text-align: left;
+      border-bottom: 1px solid var(--border); white-space: nowrap;
+    }
+    tbody td { padding: 11px 12px; border-bottom: 1px solid var(--border); vertical-align: top; }
+    tbody tr:last-child td { border-bottom: none; }
+    tbody tr:hover td { background: var(--row-hover); }
+    .kw-tag {
+      display: inline-block; font-size: 0.72rem;
+      padding: 2px 8px; border-radius: 20px;
+      background: var(--tag-bg); color: var(--tag-text);
+      border: 1px solid var(--tag-border); white-space: nowrap;
+    }
+    .title-cell { line-height: 1.45; }
+    .date-cell { font-size: 0.75rem; color: var(--muted); white-space: nowrap; }
+    .open-link {
+      color: var(--link); text-decoration: none; font-size: 0.78rem;
+      font-weight: 500; white-space: nowrap;
+    }
+    .open-link:hover { text-decoration: underline; }
+
+    #empty {
+      text-align: center; padding: 3rem 1rem;
+      color: var(--muted); font-size: 0.875rem;
+    }
+    #empty p { margin-bottom: 0.5rem; }
+    #empty .hint { font-size: 0.8rem; opacity: 0.7; }
+    .count-line {
+      font-size: 0.75rem; color: var(--muted);
+      text-align: right; margin-top: 6px;
+    }
+
+    @media (max-width: 600px) {
+      header { padding: 1rem; }
+      main { padding: 1rem 0.75rem; }
+      .controls { gap: 8px; }
+      thead th:nth-child(3), tbody td:nth-child(3) { display: none; }
+    }
+  </style>
+</head>
+<body>
+
+<header>
+  <h1>📰 政治ニュース収集</h1>
+  <p>Google News RSS から自動取得</p>
+</header>
+
+<main>
+  <div class="card">
+    <p class="card-title">検索キーワード</p>
+    <div id="chips"></div>
+    <div class="add-row">
+      <input type="text" id="kw-input" placeholder="キーワードを追加してEnter..." />
+      <button class="btn-outline" onclick="addKeyword()">＋ 追加</button>
+    </div>
+  </div>
+
+  <div class="controls">
+    <label>件数/KW</label>
+    <select id="count-sel">
+      <option value="3">3件</option>
+      <option value="5" selected>5件</option>
+      <option value="10">10件</option>
+    </select>
+    <label style="margin-left:8px;">並び順</label>
+    <select id="sort-sel" onchange="renderTable()">
+      <option value="keyword">キーワード順</option>
+      <option value="date">日時の新しい順</option>
+    </select>
+    <div id="status">待機中</div>
+    <button class="btn" id="fetch-btn" onclick="fetchNews()">▶ ニュースを取得</button>
+  </div>
+
+  <div id="results">
+    <div id="empty">
+      <p>キーワードを確認して「ニュースを取得」を押してください</p>
+      <p class="hint">※ 取得には少し時間がかかります</p>
+    </div>
+  </div>
+</main>
+
+<script>
+let keywords = ["公明党","中道","立憲","自民党","国会"];
+let allNews = [];
+
+function renderChips() {
+  document.getElementById('chips').innerHTML = keywords.map((k, i) =>
+    `<span class="chip">${k}<button class="chip-del" onclick="removeKw(${i})" title="削除">×</button></span>`
+  ).join('');
+}
+
+function addKeyword() {
+  const inp = document.getElementById('kw-input');
+  const v = inp.value.trim();
+  if (v && !keywords.includes(v)) { keywords.push(v); renderChips(); }
+  inp.value = '';
+  inp.focus();
+}
+
+function removeKw(i) { keywords.splice(i,1); renderChips(); }
+
+document.getElementById('kw-input').addEventListener('keydown', e => {
+  if (e.key === 'Enter') addKeyword();
+});
+
+function setStatus(text, cls) {
+  const el = document.getElementById('status');
+  el.textContent = text;
+  el.className = cls || '';
+}
+
+async function fetchOneKeyword(kw, count) {
+  const url = `https://news.google.com/rss/search?q=${encodeURIComponent(kw)}&hl=ja&gl=JP&ceid=JP:ja`;
+  const proxyUrl = `https://api.allorigins.win/get?url=${encodeURIComponent(url)}`;
+  const res = await fetch(proxyUrl);
+  const data = await res.json();
+  const parser = new DOMParser();
+  const xml = parser.parseFromString(data.contents, 'text/xml');
+  const items = Array.from(xml.querySelectorAll('item')).slice(0, count);
+  return items.map(item => ({
+    keyword: kw,
+    keywordIndex: keywords.indexOf(kw),
+    title: item.querySelector('title')?.textContent || '',
+    link: item.querySelector('link')?.textContent || '',
+    published: item.querySelector('pubDate')?.textContent || '',
+    dt: new Date(item.querySelector('pubDate')?.textContent || 0)
+  }));
+}
+
+async function fetchNews() {
+  if (!keywords.length) { setStatus('キーワードを追加してください', 'err'); return; }
+  const count = parseInt(document.getElementById('count-sel').value);
+  const btn = document.getElementById('fetch-btn');
+  btn.disabled = true;
+  allNews = [];
+  setStatus('取得中...', 'busy');
+  document.getElementById('results').innerHTML = '<div id="empty"><p>取得中です。しばらくお待ちください...</p></div>';
+
+  let errors = 0;
+  for (let i = 0; i < keywords.length; i++) {
+    const kw = keywords[i];
+    setStatus(`取得中 ${i+1}/${keywords.length}`, 'busy');
+    try {
+      const news = await fetchOneKeyword(kw, count);
+      allNews.push(...news);
+    } catch(e) {
+      errors++;
+    }
+    if (i < keywords.length - 1) await new Promise(r => setTimeout(r, 800));
+  }
+
+  btn.disabled = false;
+  if (allNews.length === 0) {
+    setStatus('取得失敗', 'err');
+    document.getElementById('results').innerHTML = '<div id="empty"><p>ニュースを取得できませんでした。</p><p class="hint">ネットワーク環境を確認して再度お試しください。</p></div>';
+    return;
+  }
+  setStatus(`${allNews.length}件取得`, 'ok');
+  renderTable();
+}
+
+function renderTable() {
+  if (!allNews.length) return;
+  const sortBy = document.getElementById('sort-sel').value;
+  const sorted = [...allNews].sort((a,b) =>
+    sortBy === 'date'
+      ? b.dt - a.dt
+      : a.keywordIndex - b.keywordIndex || b.dt - a.dt
+  );
+
+  const rows = sorted.map(n => {
+    const dateStr = n.dt && n.dt.getFullYear() > 2000
+      ? n.dt.toLocaleString('ja-JP', {year:'numeric',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit'})
+      : n.published || '—';
+    const title = n.title.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+    return `<tr>
+      <td><span class="kw-tag">${n.keyword}</span></td>
+      <td class="title-cell">${title}</td>
+      <td class="date-cell">${dateStr}</td>
+      <td><a class="open-link" href="${n.link}" target="_blank" rel="noopener">開く ↗</a></td>
+    </tr>`;
+  }).join('');
+
+  document.getElementById('results').innerHTML = `
+    <div class="table-wrap">
+      <table>
+        <thead><tr>
+          <th style="width:90px;">キーワード</th>
+          <th>タイトル</th>
+          <th style="width:130px;">公開日時</th>
+          <th style="width:60px;">リンク</th>
+        </tr></thead>
+        <tbody>${rows}</tbody>
+      </table>
+    </div>
+    <p class="count-line">${sorted.length}件表示</p>
+  `;
+}
+
+renderChips();
+</script>
+</body>
+</html>
