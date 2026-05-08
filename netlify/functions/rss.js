@@ -23,6 +23,14 @@ exports.handler = async function(event) {
                      block.match(/<link \/>(.*?)<\//))?.[1] ||
                     block.match(/href="(https?[^"]+)"/)?.[1] || '';
       const pub   = block.match(/<pubDate>(.*?)<\/pubDate>/)?.[1] || '';
+
+      // --- 追加した除外設定 ---
+      // キーワードが「公明党」で、かつリンクに「komei.or.jp」が含まれている場合はスキップする
+      if (keyword === '公明党' && link.includes('komei.or.jp')) {
+        continue;
+      }
+      // ------------------------
+
       if (title) items.push({ keyword, title, link, published: pub });
     }
 
