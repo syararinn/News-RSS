@@ -18,62 +18,45 @@
     * { box-sizing: border-box; margin: 0; padding: 0; }
     body { font-family: sans-serif; background: var(--bg); color: var(--text); padding-bottom: 4rem; -webkit-tap-highlight-color: transparent; }
     header { background: var(--accent); color: #fff; padding: 1.5rem 1rem; text-align: center; }
-    
-    /* ヘッダーの文字を少し調整し、v5の表記を追加 */
     header h1 { font-size: 1.2rem; display: flex; align-items: center; justify-content: center; gap: 6px; }
     header h1 .version { font-size: 0.6rem; background: rgba(255,255,255,0.2); padding: 2px 6px; border-radius: 10px; font-weight: normal; }
-
     main { max-width: 900px; margin: 0 auto; padding: 1rem; }
-
     .tabs { display: flex; gap: 4px; margin-bottom: 1rem; border-bottom: 2px solid var(--border); position: sticky; top: 0; background: var(--bg); z-index: 100; }
     .tab-btn { background: none; border: none; font-size: 0.9rem; font-weight: 600; color: var(--muted); padding: 12px 5px; flex: 1; cursor: pointer; }
     .tab-btn.active { color: var(--accent); border-bottom: 3px solid var(--accent); background: var(--accent-light); }
-
     .card { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 1rem; margin-bottom: 1rem; box-shadow: 0 2px 4px rgba(0,0,0,0.02); }
     .card-title { font-size: 0.75rem; font-weight: 700; color: var(--muted); margin-bottom: 0.8rem; display: flex; justify-content: space-between; }
-    
     .chips { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 0.8rem; }
     .chip { background: var(--tag-bg); color: var(--tag-text); border: 1px solid var(--tag-border); font-size: 0.75rem; padding: 5px 12px; border-radius: 20px; display: flex; align-items: center; }
     .chip-del { background: none; border: none; margin-left: 6px; cursor: pointer; font-weight: bold; color: var(--tag-text); padding: 2px; }
-    
     .chip-ng { background: #fff0f0; color: #c0392b; border-color: #f5bbb7; }
     .chip-ng .chip-del { color: #c0392b; }
-
     .input-group { display: flex; gap: 8px; }
     .input-group input { flex: 1; border: 1px solid var(--border); border-radius: 8px; padding: 10px; font-size: 0.9rem; outline: none; }
     .input-group input:focus { border-color: var(--accent); }
-    
     .btn { background: var(--accent); color: #fff; border: none; border-radius: 8px; padding: 10px 15px; font-size: 0.9rem; cursor: pointer; font-weight: 600; }
     .btn-secondary { background: #6b6b66; }
     .btn:disabled { opacity: 0.5; cursor: not-allowed; }
-    
     .controls { display: flex; align-items: center; justify-content: space-between; margin-bottom: 1rem; gap: 10px; }
     .sort-select { border: 1px solid var(--border); border-radius: 8px; padding: 8px; font-size: 0.8rem; background: #fff; }
     .status-info { font-size: 0.7rem; color: var(--muted); flex: 1; font-weight: bold; text-align: right; }
-
     .table-wrap { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; overflow: hidden; }
     table { width: 100%; border-collapse: collapse; font-size: 0.85rem; }
     thead th { background: #f9f8f5; padding: 12px 10px; text-align: left; border-bottom: 1px solid var(--border); color: var(--muted); font-size: 0.7rem; text-transform: uppercase; }
     tbody td { padding: 14px 10px; border-bottom: 1px solid var(--border); vertical-align: top; }
-    
-    /* 【デザイン改善】列幅の最適化（タイトルを一番広くする） */
     .col-source { width: 1%; white-space: nowrap; padding-right: 4px !important; }
     .col-title { width: 99%; }
     .col-date { width: 1%; white-space: nowrap; padding-left: 4px !important; padding-right: 4px !important; text-align: center; }
     .col-link { width: 1%; white-space: nowrap; padding-left: 4px !important; text-align: right; }
-
     @media (max-width: 600px) {
       thead th { padding: 10px 6px; }
       tbody td { padding: 14px 6px; }
       main { padding: 0.5rem; }
     }
-    
     tr.visited { opacity: 0.45; filter: grayscale(1); }
-    
     .kw-tag { font-size: 0.65rem; padding: 2px 6px; border-radius: 10px; background: var(--tag-bg); color: var(--tag-text); border: 1px solid var(--tag-border); white-space: nowrap; display: inline-block;}
     .date-cell { font-size: 0.65rem; color: var(--muted); }
     .open-link { color: var(--link); text-decoration: none; font-weight: 600; padding: 5px 0; display: inline-block; font-size: 0.8rem;}
-    
     #results-info { text-align: center; padding: 4rem 1rem; color: var(--muted); font-size: 0.9rem; }
   </style>
 </head>
@@ -144,7 +127,6 @@
 </main>
 
 <script>
-// 【新機能】壊れたデータを検知して自動修復する関数
 function safeLoadArray(key, defaultVal) {
   try {
     const val = localStorage.getItem(key);
@@ -153,13 +135,11 @@ function safeLoadArray(key, defaultVal) {
       if (Array.isArray(parsed)) return parsed;
     }
   } catch (e) {
-    console.warn(`[自動修復] ${key} のデータが壊れていたため初期化しました`);
-    localStorage.removeItem(key); // 壊れたデータを消去
+    localStorage.removeItem(key);
   }
   return defaultVal;
 }
 
-// 安全にデータを読み込む
 let keywords = safeLoadArray('myKeywords', ["公明党","自民党","立憲","国会","ドローン","麻生区","新百合ヶ丘"]);
 let ngWords = safeLoadArray('myNgWords', []);
 let visitedLinks = safeLoadArray('myVisitedLinks', []);
@@ -187,15 +167,12 @@ function switchTab(t) {
   currentTab = t;
   document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
   document.getElementById('tab-'+t).classList.add('active');
-  
   document.getElementById('kw-card').style.display = (t === 'news') ? 'block' : 'none';
   document.getElementById('ng-card').style.display = (t === 'news') ? 'block' : 'none';
   document.getElementById('mj-card').style.display = (t === 'major') ? 'block' : 'none';
   document.getElementById('sc-card').style.display = (t === 'social') ? 'block' : 'none';
-  
   const countSel = document.getElementById('count-sel');
   if (countSel) countSel.style.display = (t === 'news') ? 'inline-block' : 'none';
-  
   renderTable();
 }
 
@@ -252,7 +229,8 @@ async function handleFetch() {
       dataStore.news = [];
       for (let i = 0; i < keywords.length; i++) {
         document.getElementById('status-info').textContent = `取得中 ${i+1}/${keywords.length}`;
-        const res = await fetch(`https://monumental-piroshki-d8aafb.netlify.app/.netlify/functions/rss?keyword=${encodeURIComponent(keywords[i])}&type=news&exclude=${excludeParam}&count=${fetchCount}`);
+        // 【超重要】ここを相対パスに変更しました
+        const res = await fetch(`/.netlify/functions/rss?keyword=${encodeURIComponent(keywords[i])}&type=news&exclude=${excludeParam}&count=${fetchCount}`);
         if (!res.ok) throw new Error('通信エラー');
         const items = await res.json();
         dataStore.news.push(...items.map(it => ({...it, dt: new Date(it.published || 0)})));
@@ -263,7 +241,8 @@ async function handleFetch() {
       const scInput = document.getElementById('sc-input');
       const kw = (type === 'social' && scInput) ? scInput.value.trim() : "";
       document.getElementById('status-info').textContent = '取得中...';
-      const res = await fetch(`https://monumental-piroshki-d8aafb.netlify.app/.netlify/functions/rss?type=${type}&keyword=${encodeURIComponent(kw)}&exclude=${excludeParam}`);
+      // 【超重要】ここも相対パスに変更しました
+      const res = await fetch(`/.netlify/functions/rss?type=${type}&keyword=${encodeURIComponent(kw)}&exclude=${excludeParam}`);
       if (!res.ok) throw new Error('通信エラー');
       dataStore[type] = (await res.json()).map(it => ({...it, dt: new Date(it.published || 0)}));
     }
