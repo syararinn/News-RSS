@@ -3,14 +3,11 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-  
   <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>📰</text></svg>">
   <link rel="apple-touch-icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>📰</text></svg>">
-  
   <meta name="theme-color" content="#1a5c38">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-
   <title>My News Dashboard</title>
   <style>
     :root {
@@ -48,7 +45,7 @@
     
     .controls { display: flex; align-items: center; justify-content: space-between; margin-bottom: 1rem; gap: 10px; }
     .sort-select { border: 1px solid var(--border); border-radius: 8px; padding: 8px; font-size: 0.8rem; background: #fff; }
-    .status-info { font-size: 0.7rem; color: var(--muted); flex: 1; font-weight: bold; }
+    .status-info { font-size: 0.7rem; color: var(--muted); flex: 1; font-weight: bold; text-align: right; }
 
     .table-wrap { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; overflow: hidden; }
     table { width: 100%; border-collapse: collapse; font-size: 0.85rem; }
@@ -108,10 +105,19 @@
   </div>
 
   <div class="controls">
-    <select id="sort-sel" class="sort-select" onchange="renderTable()">
-      <option value="date">新しい順</option>
-      <option value="keyword">出典順</option>
-    </select>
+    <div style="display: flex; gap: 8px;">
+      <select id="count-sel" class="sort-select">
+        <option value="5">5件</option>
+        <option value="10">10件</option>
+        <option value="15">15件</option>
+        <option value="20">20件</option>
+        <option value="50">50件</option>
+      </select>
+      <select id="sort-sel" class="sort-select" onchange="renderTable()">
+        <option value="date">新しい順</option>
+        <option value="keyword">出典順</option>
+      </select>
+    </div>
     <div id="status-info" class="status-info">待機中</div>
     <button id="main-fetch-btn" class="btn" onclick="handleFetch()">取得</button>
   </div>
@@ -125,6 +131,13 @@
 let keywords = JSON.parse(localStorage.getItem('myKeywords')) || ["公明党","自民党","立憲","国会","ドローン","麻生区","新百合ヶ丘"];
 let ngWords = JSON.parse(localStorage.getItem('myNgWords')) || []; 
 let visitedLinks = JSON.parse(localStorage.getItem('myVisitedLinks')) || [];
+
+// 【機能追加】件数の設定を読み込み・保存
+let savedCount = localStorage.getItem('myFetchCount') || '10';
+document.getElementById('count-sel').value = savedCount;
+document.getElementById('count-sel').addEventListener('change', (e) => {
+  localStorage.setItem('myFetchCount', e.target.value);
+});
 
 let dataStore = { news: [], major: [], social: [] };
 let currentTab = 'news';
@@ -142,111 +155,5 @@ function switchTab(t) {
   currentTab = t;
   document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
   document.getElementById('tab-'+t).classList.add('active');
-  document.getElementById('kw-card').style.display = (t === 'news') ? 'block' : 'none';
-  document.getElementById('ng-card').style.display = (t === 'news') ? 'block' : 'none';
-  document.getElementById('mj-card').style.display = (t === 'major') ? 'block' : 'none';
-  document.getElementById('sc-card').style.display = (t === 'social') ? 'block' : 'none';
-  renderTable();
-}
-
-function renderChips() {
-  document.getElementById('chips-kw').innerHTML = keywords.map((k, i) =>
-    `<span class="chip">${k}<button class="chip-del" onclick="removeItem('kw',${i})">×</button></span>`).join('');
-  document.getElementById('chips-ng').innerHTML = ngWords.map((k, i) =>
-    `<span class="chip chip-ng">${k}<button class="chip-del" onclick="removeItem('ng',${i})">×</button></span>`).join('');
-}
-
-function addItem(type) {
-  const inp = document.getElementById(type + '-input');
-  const v = inp.value.trim();
-  if (!v) return;
-  if (type === 'kw' && !keywords.includes(v)) keywords.push(v);
-  if (type === 'ng' && !ngWords.includes(v)) ngWords.push(v);
-  saveData();
-  renderChips();
-  inp.value = '';
-}
-
-function removeItem(type, i) {
-  if (type === 'kw') keywords.splice(i, 1);
-  if (type === 'ng') ngWords.splice(i, 1);
-  saveData();
-  renderChips();
-}
-
-function saveData() {
-  localStorage.setItem('myKeywords', JSON.stringify(keywords));
-  localStorage.setItem('myNgWords', JSON.stringify(ngWords));
-}
-
-function markAsVisited(link) {
-  if (!visitedLinks.includes(link)) {
-    visitedLinks.push(link);
-    if (visitedLinks.length > 500) visitedLinks.shift(); 
-    localStorage.setItem('myVisitedLinks', JSON.stringify(visitedLinks));
-    renderTable();
-  }
-}
-
-async function handleFetch() {
-  const btn = document.getElementById('main-fetch-btn');
-  btn.disabled = true;
-  const excludeParam = encodeURIComponent(ngWords.join(','));
   
-  try {
-    if (currentTab === 'news') {
-      dataStore.news = [];
-      for (let i = 0; i < keywords.length; i++) {
-        document.getElementById('status-info').textContent = `取得中 ${i+1}/${keywords.length}`;
-        const res = await fetch(`https://monumental-piroshki-d8aafb.netlify.app/.netlify/functions/rss?keyword=${encodeURIComponent(keywords[i])}&type=news&exclude=${excludeParam}`);
-        if (!res.ok) throw new Error('通信エラー');
-        const items = await res.json();
-        dataStore.news.push(...items.map(it => ({...it, dt: new Date(it.published || 0)})));
-        await new Promise(r => setTimeout(r, 300));
-      }
-    } else {
-      const type = currentTab;
-      const kw = type === 'social' ? document.getElementById('sc-input').value.trim() : "";
-      document.getElementById('status-info').textContent = '取得中...';
-      const res = await fetch(`https://monumental-piroshki-d8aafb.netlify.app/.netlify/functions/rss?type=${type}&keyword=${encodeURIComponent(kw)}&exclude=${excludeParam}`);
-      if (!res.ok) throw new Error('通信エラー');
-      dataStore[type] = (await res.json()).map(it => ({...it, dt: new Date(it.published || 0)}));
-    }
-    document.getElementById('status-info').textContent = '完了';
-  } catch (error) {
-    document.getElementById('status-info').textContent = '⚠️ 取得エラー';
-  } finally {
-    btn.disabled = false;
-    renderTable();
-  }
-}
-
-function renderTable() {
-  const data = dataStore[currentTab];
-  if (!data || data.length === 0) {
-    document.getElementById('results').innerHTML = '<div id="results-info">取得ボタンを押してください</div>';
-    return;
-  }
-  const sortBy = document.getElementById('sort-sel').value;
-  const sorted = [...data].sort((a,b) => {
-    if (sortBy === 'date') return b.dt - a.dt;
-    return a.keyword.localeCompare(b.keyword, 'ja') || b.dt - a.dt;
-  });
-  const rows = sorted.map(n => {
-    const d = n.dt;
-    const dateStr = d.getFullYear() > 2000 ? `${d.getMonth()+1}/${d.getDate()} ${d.getHours()}:${(d.getMinutes()<10?'0':'')+d.getMinutes()}` : '—';
-    const isVisited = visitedLinks.includes(n.link);
-    return `<tr class="${isVisited ? 'visited' : ''}">
-      <td><span class="kw-tag">${n.keyword}</span></td>
-      <td><div style="line-height:1.4">${n.title}</div></td>
-      <td class="date-cell">${dateStr}</td>
-      <td><a class="open-link" href="${n.link}" target="_blank" onclick="markAsVisited('${n.link}')">開く ↗</a></td>
-    </tr>`;
-  }).join('');
-  document.getElementById('results').innerHTML = `<div class="table-wrap"><table><tbody>${rows}</tbody></table></div>`;
-}
-
-renderChips();
-</script>
-</body>
-</html>
+  document.
