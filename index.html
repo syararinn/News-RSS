@@ -47,16 +47,30 @@
     .sort-select { border: 1px solid var(--border); border-radius: 8px; padding: 8px; font-size: 0.8rem; background: #fff; }
     .status-info { font-size: 0.7rem; color: var(--muted); flex: 1; font-weight: bold; text-align: right; }
 
+    /* --- テーブルのデザイン調整 --- */
     .table-wrap { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; overflow: hidden; }
     table { width: 100%; border-collapse: collapse; font-size: 0.85rem; }
-    thead th { background: #f9f8f5; padding: 12px; text-align: left; border-bottom: 1px solid var(--border); color: var(--muted); font-size: 0.7rem; text-transform: uppercase; }
-    tbody td { padding: 14px 12px; border-bottom: 1px solid var(--border); vertical-align: top; }
+    thead th { background: #f9f8f5; padding: 12px 10px; text-align: left; border-bottom: 1px solid var(--border); color: var(--muted); font-size: 0.7rem; text-transform: uppercase; }
+    tbody td { padding: 14px 10px; border-bottom: 1px solid var(--border); vertical-align: top; }
+    
+    /* 列幅の最適化 */
+    .col-source { width: 1%; white-space: nowrap; padding-right: 4px !important; }
+    .col-title { width: 99%; }
+    .col-date { width: 1%; white-space: nowrap; padding-left: 4px !important; padding-right: 4px !important; text-align: center; }
+    .col-link { width: 1%; white-space: nowrap; padding-left: 4px !important; text-align: right; }
+
+    /* スマホ向けに左右の余白を少し詰めて、表示領域をさらに広げる */
+    @media (max-width: 600px) {
+      thead th { padding: 10px 6px; }
+      tbody td { padding: 14px 6px; }
+      main { padding: 0.5rem; }
+    }
     
     tr.visited { opacity: 0.45; filter: grayscale(1); }
     
-    .kw-tag { font-size: 0.65rem; padding: 2px 8px; border-radius: 10px; background: var(--tag-bg); color: var(--tag-text); border: 1px solid var(--tag-border); white-space: nowrap; }
-    .date-cell { font-size: 0.7rem; color: var(--muted); white-space: nowrap; }
-    .open-link { color: var(--link); text-decoration: none; font-weight: 600; padding: 5px 0; display: inline-block; }
+    .kw-tag { font-size: 0.65rem; padding: 2px 6px; border-radius: 10px; background: var(--tag-bg); color: var(--tag-text); border: 1px solid var(--tag-border); white-space: nowrap; display: inline-block;}
+    .date-cell { font-size: 0.65rem; color: var(--muted); }
+    .open-link { color: var(--link); text-decoration: none; font-weight: 600; padding: 5px 0; display: inline-block; font-size: 0.8rem;}
     
     #results-info { text-align: center; padding: 4rem 1rem; color: var(--muted); font-size: 0.9rem; }
   </style>
@@ -128,7 +142,6 @@
 </main>
 
 <script>
-// 【修正点1】データが壊れていても絶対にエラーで止まらないように安全に読み込む
 let keywords = ["公明党","自民党","立憲","国会","ドローン","麻生区","新百合ヶ丘"];
 try {
   const k = JSON.parse(localStorage.getItem('myKeywords'));
@@ -163,29 +176,6 @@ if (countSelEl) {
 
 let dataStore = { news: [], major: [], social: [] };
 let currentTab = 'news';
-
-// 【修正点2】漢字変換中のEnterキー（e.isComposing）は無視して誤動作を防ぐ
-['kw', 'ng'].forEach(type => {
-  const inputEl = document.getElementById(type + '-input');
-  if (inputEl) {
-    inputEl.addEventListener('keydown', e => {
-      if (e.key === 'Enter' && !e.isComposing) {
-        e.preventDefault();
-        addItem(type);
-      }
-    });
-  }
-});
-
-const scInputEl = document.getElementById('sc-input');
-if (scInputEl) {
-  scInputEl.addEventListener('keydown', e => {
-    if (e.key === 'Enter' && !e.isComposing) {
-      e.preventDefault();
-      handleFetch();
-    }
-  });
-}
 
 function switchTab(t) {
   currentTab = t;
@@ -300,16 +290,30 @@ function renderTable() {
     const dateStr = d.getFullYear() > 2000 ? `${d.getMonth()+1}/${d.getDate()} ${d.getHours()}:${(d.getMinutes()<10?'0':'')+d.getMinutes()}` : '—';
     const isVisited = visitedLinks.includes(n.link);
     return `<tr class="${isVisited ? 'visited' : ''}">
-      <td><span class="kw-tag">${n.keyword}</span></td>
-      <td><div style="line-height:1.4">${n.title}</div></td>
-      <td class="date-cell">${dateStr}</td>
-      <td><a class="open-link" href="${n.link}" target="_blank" onclick="markAsVisited('${n.link}')">開く ↗</a></td>
+      <td class="col-source"><span class="kw-tag">${n.keyword}</span></td>
+      <td class="col-title"><div style="line-height:1.45; font-size: 0.9rem;">${n.title}</div></td>
+      <td class="col-date"><span class="date-cell">${dateStr}</span></td>
+      <td class="col-link"><a class="open-link" href="${n.link}" target="_blank" onclick="markAsVisited('${n.link}')">開く ↗</a></td>
     </tr>`;
   }).join('');
-  document.getElementById('results').innerHTML = `<div class="table-wrap"><table><tbody>${rows}</tbody></table></div>`;
+  
+  // HTML生成部分にクラスを割り当てて横幅を制御
+  document.getElementById('results').innerHTML = `
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th class="col-source">出典</th>
+            <th class="col-title">タイトル</th>
+            <th class="col-date">日時</th>
+            <th class="col-link">リンク</th>
+          </tr>
+        </thead>
+        <tbody>${rows}</tbody>
+      </table>
+    </div>`;
 }
 
-// 最初の起動時処理
 renderChips();
 </script>
 </body>
