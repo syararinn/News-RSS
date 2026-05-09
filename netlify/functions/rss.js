@@ -3,7 +3,6 @@ exports.handler = async function(event) {
   const count = parseInt(event.queryStringParameters?.count || '10');
   const type = event.queryStringParameters?.type || 'news';
   const excludeStr = event.queryStringParameters?.exclude || '';
-  // 空文字が入らないようにフィルタリング
   const excludeList = excludeStr ? excludeStr.split(',').filter(w => w) : [];
 
   try {
@@ -36,12 +35,12 @@ exports.handler = async function(event) {
         const link = (block.match(/<link>(.*?)<\/link>/) || block.match(/<link \/>(.*?)<\//))?.[1] || block.match(/href="(https?[^"]+)"/)?.[1] || '';
         const pub = (block.match(/<pubDate>(.*?)<\/pubDate>/) || block.match(/<dc:date>(.*?)<\/dc:date>/))?.[1] || '';
 
-        // 【ルール1：絶対除外】コードの奥底で「komei.or.jp」を強制ブロック
-        if (title.includes('komei.or.jp') || link.includes('komei.or.jp')) {
+        // 【ルール1：絶対除外】「komei.or.jp」と「電子版プラス」を裏側で強制ブロック
+        if (title.includes('komei.or.jp') || link.includes('komei.or.jp') || title.includes('電子版プラス') || link.includes('電子版プラス')) {
           continue;
         }
 
-        // 【ルール2：画面からの除外】画面で設定したNGワード（公明新聞など）が含まれていたらスキップ
+        // 【ルール2：画面からの除外】
         const isExcluded = excludeList.length > 0 && excludeList.some(word => title.includes(word) || link.includes(word));
         if (isExcluded) continue;
 
