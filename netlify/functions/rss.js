@@ -1,31 +1,50 @@
 exports.handler = async function(event) {
   const keyword = event.queryStringParameters?.keyword || '';
   const count = parseInt(event.queryStringParameters?.count || '5');
+  const type = event.queryStringParameters?.type || 'news'; // タブの種類を受け取る
 
-  if (!keyword) {
+  if (!keyword && type !== 'major') {
     return { statusCode: 400, body: JSON.stringify({ error: 'keyword required' }) };
   }
 
   try {
-    // 【変更点1】検索するサイト（URL）を2つ用意する
-    const googleUrl = `https://news.google.com/rss/search?q=${encodeURIComponent(keyword)}&hl=ja&gl=JP&ceid=JP:ja`;
-    const bingUrl = `https://www.bing.com/news/search?q=${encodeURIComponent(keyword)}&format=rss`;
+    let urls = [];
     
-    const urls = [googleUrl, bingUrl]; // 検索先リスト
+    if (type === 'major') {
+      // 【主要ニュース】
+      urls = [
+        'https://news.yahoo.co.jp/rss/topics/top-picks.xml',
+        'https://www.nhk.or.jp/rss/news/cat0.xml'
+      ];
+    } else if (type === 'social') {
+      // 【ブログ・コラム】note ＋ はてなブックマーク
+      urls = [
+        `https://note.com/hashtag/${encodeURIComponent(keyword)}/rss`,
+        `https://b.hatena.ne.jp/search/tag?q=${encodeURIComponent(keyword)}&mode=rss`
+      ];
+    } else {
+      // 【ニュース検索】Google ＋ Bing
+      urls = [
+        `https://news.google.com/rss/search?q=${encodeURIComponent(keyword)}&hl=ja&gl=JP&ceid=JP:ja`,
+        `https://www.bing.com/news/search?q=${encodeURIComponent(keyword)}&format=rss`
+      ];
+    }
+    
     const items = [];
-    const seenLinks = new Set(); // 【変更点2】重複チェック用のメモ帳を用意
+    const seenLinks = new Set();
 
-    // 【変更点3】GoogleとBing、順番に探しに行くループを追加
     for (const url of urls) {
       const res = await fetch(url);
-      if (!res.ok) continue; // もし片方のサイトがエラーでも、止まらずに次へ行く
+      if (!res.ok) continue;
       
       const xml = await res.text();
       const itemRegex = /<item>([\s\S]*?)<\/item>/g;
       let match;
-      let sourceCount = 0; // それぞれのサイトから `count` 件ずつ取るためのカウンター
+      let sourceCount = 0;
+      
+      const targetCount = (type === 'major') ? count * 3 : count;
 
-      while ((match = itemRegex.exec(xml)) !== null && sourceCount < count) {
+      while ((match = itemRegex.exec(xml)) !== null && sourceCount < targetCount) {
         const block = match[1];
         const title = (block.match(/<title><!\[CDATA\[(.*?)\]\]><\/title>/) ||
                        block.match(/<title>(.*?)<\/title>/))?.[1] || '';
@@ -34,15 +53,22 @@ exports.handler = async function(event) {
                       block.match(/href="(https?[^"]+)"/)?.[1] || '';
         const pub   = block.match(/<pubDate>(.*?)<\/pubDate>/)?.[1] || '';
 
-        // --- 修正した除外設定（そのまま引き継ぎます） ---
+        // 除外設定
         if (keyword === '公明党' && (title.includes('komei.or.jp') || title.includes('公明新聞'))) {
           continue;
         }
 
-        // 【変更点4】タイトルとリンクがあり、かつ「まだ見ていないリンク」なら追加する
         if (title && link && !seenLinks.has(link)) {
-          seenLinks.add(link); // メモ帳に記録
-          items.push({ keyword, title, link, published: pub });
+          seenLinks.add(link);
+          
+          let displayKeyword = keyword;
+          if (type === 'major') {
+            displayKeyword = url.includes('yahoo') ? 'Yahoo!' : 'NHK';
+          } else if (type === 'social') {
+            displayKeyword = url.includes('note.com') ? 'note' : 'はてな';
+          }
+
+          items.push({ keyword: displayKeyword, title, link, published: pub });
           sourceCount++;
         }
       }
