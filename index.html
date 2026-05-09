@@ -2,8 +2,10 @@
 <html lang="ja">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>多角ニュース収集アプリ v4</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <title>My News Dashboard</title>
   <style>
     :root {
       --bg: #f5f4f0; --surface: #ffffff; --border: #e2e0d8; --text: #1a1a18;
@@ -11,50 +13,48 @@
       --tag-bg: #eef7f2; --tag-border: #b5d9c5; --tag-text: #1a5c38; --link: #1a5c38;
     }
     * { box-sizing: border-box; margin: 0; padding: 0; }
-    body { font-family: sans-serif; background: var(--bg); color: var(--text); padding-bottom: 4rem; }
-    header { background: var(--accent); color: #fff; padding: 1.25rem 1.5rem; text-align: center; }
+    body { font-family: sans-serif; background: var(--bg); color: var(--text); padding-bottom: 4rem; -webkit-tap-highlight-color: transparent; }
+    header { background: var(--accent); color: #fff; padding: 1.5rem 1rem; text-align: center; }
     header h1 { font-size: 1.2rem; }
-    main { max-width: 900px; margin: 0 auto; padding: 1.5rem 1rem; }
+    main { max-width: 900px; margin: 0 auto; padding: 1rem; }
 
-    .tabs { display: flex; gap: 4px; margin-bottom: 1.25rem; border-bottom: 2px solid var(--border); }
-    .tab-btn {
-      background: none; border: none; font-size: 0.9rem; font-weight: 600;
-      color: var(--muted); cursor: pointer; padding: 12px 10px; flex: 1;
-    }
+    .tabs { display: flex; gap: 4px; margin-bottom: 1rem; border-bottom: 2px solid var(--border); position: sticky; top: 0; background: var(--bg); z-index: 100; }
+    .tab-btn { background: none; border: none; font-size: 0.9rem; font-weight: 600; color: var(--muted); padding: 12px 5px; flex: 1; cursor: pointer; }
     .tab-btn.active { color: var(--accent); border-bottom: 3px solid var(--accent); background: var(--accent-light); }
 
-    .card { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 1rem; margin-bottom: 1.5rem; }
-    .card-title { font-size: 0.75rem; font-weight: 600; color: var(--muted); margin-bottom: 0.75rem; display: flex; justify-content: space-between; }
+    .card { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 1rem; margin-bottom: 1rem; box-shadow: 0 2px 4px rgba(0,0,0,0.02); }
+    .card-title { font-size: 0.75rem; font-weight: 700; color: var(--muted); margin-bottom: 0.8rem; display: flex; justify-content: space-between; }
     
-    #chips { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 0.75rem; }
-    .chip { background: var(--tag-bg); color: var(--tag-text); border: 1px solid var(--tag-border); font-size: 0.75rem; padding: 4px 10px; border-radius: 20px; }
-    .chip-del { background: none; border: none; margin-left: 5px; cursor: pointer; color: var(--tag-text); font-weight: bold; }
+    .chips { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 0.8rem; }
+    .chip { background: var(--tag-bg); color: var(--tag-text); border: 1px solid var(--tag-border); font-size: 0.75rem; padding: 5px 12px; border-radius: 20px; display: flex; align-items: center; }
+    .chip-del { background: none; border: none; margin-left: 6px; cursor: pointer; font-weight: bold; color: var(--tag-text); padding: 2px; }
     
+    .chip-ng { background: #fff0f0; color: #c0392b; border-color: #f5bbb7; }
+    .chip-ng .chip-del { color: #c0392b; }
+
     .input-group { display: flex; gap: 8px; }
-    .input-group input { flex: 1; border: 1px solid var(--border); border-radius: 6px; padding: 8px 12px; font-size: 0.9rem; }
+    .input-group input { flex: 1; border: 1px solid var(--border); border-radius: 8px; padding: 10px; font-size: 0.9rem; outline: none; }
+    .input-group input:focus { border-color: var(--accent); }
     
-    .btn { background: var(--accent); color: #fff; border: none; border-radius: 6px; padding: 10px 20px; font-size: 0.9rem; cursor: pointer; font-weight: 600; }
+    .btn { background: var(--accent); color: #fff; border: none; border-radius: 8px; padding: 10px 15px; font-size: 0.9rem; cursor: pointer; font-weight: 600; }
     .btn-secondary { background: #6b6b66; }
-    .btn:disabled { opacity: 0.5; }
-
-    .controls { display: flex; align-items: center; justify-content: space-between; margin-bottom: 1rem; }
-    .status-info { font-size: 0.75rem; color: var(--muted); }
     
-    /* 【追加】プルダウンのデザイン */
-    .sort-select {
-      border: 1px solid var(--border); border-radius: 6px; padding: 6px 10px;
-      font-size: 0.8rem; background: var(--surface); color: var(--text); outline: none;
-    }
+    .controls { display: flex; align-items: center; justify-content: space-between; margin-bottom: 1rem; gap: 10px; }
+    .sort-select { border: 1px solid var(--border); border-radius: 8px; padding: 8px; font-size: 0.8rem; background: #fff; }
+    .status-info { font-size: 0.7rem; color: var(--muted); flex: 1; }
 
-    .table-wrap { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; overflow: hidden; }
+    .table-wrap { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; overflow: hidden; }
     table { width: 100%; border-collapse: collapse; font-size: 0.85rem; }
-    thead th { background: #f9f8f5; padding: 12px; text-align: left; border-bottom: 1px solid var(--border); color: var(--muted); font-size: 0.75rem; }
-    tbody td { padding: 12px; border-bottom: 1px solid var(--border); vertical-align: top; }
-    .kw-tag { font-size: 0.7rem; padding: 2px 8px; border-radius: 10px; background: var(--tag-bg); color: var(--tag-text); border: 1px solid var(--tag-border); white-space: nowrap; }
-    .date-cell { font-size: 0.75rem; color: var(--muted); white-space: nowrap; }
-    .open-link { color: var(--link); text-decoration: none; font-weight: 600; font-size: 0.8rem; }
+    thead th { background: #f9f8f5; padding: 12px; text-align: left; border-bottom: 1px solid var(--border); color: var(--muted); font-size: 0.7rem; text-transform: uppercase; }
+    tbody td { padding: 14px 12px; border-bottom: 1px solid var(--border); vertical-align: top; }
     
-    #results-info { text-align: center; padding: 3rem 1rem; color: var(--muted); font-size: 0.9rem; }
+    tr.visited { opacity: 0.45; filter: grayscale(1); }
+    
+    .kw-tag { font-size: 0.65rem; padding: 2px 8px; border-radius: 10px; background: var(--tag-bg); color: var(--tag-text); border: 1px solid var(--tag-border); white-space: nowrap; }
+    .date-cell { font-size: 0.7rem; color: var(--muted); white-space: nowrap; }
+    .open-link { color: var(--link); text-decoration: none; font-weight: 600; padding: 5px 0; display: inline-block; }
+    
+    #results-info { text-align: center; padding: 4rem 1rem; color: var(--muted); font-size: 0.9rem; }
   </style>
 </head>
 <body>
@@ -65,50 +65,52 @@
 
 <main>
   <div class="tabs">
-    <button id="tab-news" class="tab-btn active" onclick="switchTab('news')">🔍 ニュース検索</button>
-    <button id="tab-major" class="tab-btn" onclick="switchTab('major')">🌍 主要ニュース</button>
-    <button id="tab-social" class="tab-btn" onclick="switchTab('social')">📝 ブログ・コラム</button>
+    <button id="tab-news" class="tab-btn active" onclick="switchTab('news')">🔍 ニュース</button>
+    <button id="tab-major" class="tab-btn" onclick="switchTab('major')">🌍 主要</button>
+    <button id="tab-social" class="tab-btn" onclick="switchTab('social')">📝 ブログ</button>
   </div>
 
   <div id="kw-card" class="card">
-    <div class="card-title">ニュース検索キーワード <span>※複数キーワードを巡回</span></div>
-    <div id="chips"></div>
+    <div class="card-title">検索キーワード</div>
+    <div id="chips-kw" class="chips"></div>
     <div class="input-group">
-      <input type="text" id="kw-input" placeholder="例: 国会, ドローン..." />
-      <button class="btn btn-secondary" onclick="addKeyword()">追加</button>
+      <input type="text" id="kw-input" placeholder="追加キーワード..." />
+      <button class="btn btn-secondary" onclick="addItem('kw')">追加</button>
     </div>
   </div>
 
-  <div id="mj-card" class="card" style="display:none">
-    <p style="font-size:0.85rem; color:var(--muted)">Yahoo!トピックスとNHKニュースから、今現在の主要な最新ニュースを時系列で一括取得します。</p>
-  </div>
-
-  <div id="sc-card" class="card" style="display:none">
-    <div class="card-title">個別にキーワード検索 <span>※未入力なら はてな＆noteの注目記事</span></div>
+  <div id="ng-card" class="card">
+    <div class="card-title">除外(NG)ワード <span>※タイトルやリンクに含まれると非表示</span></div>
+    <div id="chips-ng" class="chips"></div>
     <div class="input-group">
-      <input type="text" id="sc-input" placeholder="検索したいワード（例: 政治, ライフハック）" />
-      <button class="btn btn-secondary" onclick="fetchSocial(true)">検索</button>
+      <input type="text" id="ng-input" placeholder="例: 公明新聞, PR TIMES" />
+      <button class="btn btn-secondary" onclick="addItem('ng')">追加</button>
     </div>
   </div>
 
   <div class="controls">
-    <div style="display: flex; gap: 10px; align-items: center;">
-      <select id="sort-sel" class="sort-select" onchange="renderTable()">
-        <option value="date">日時の新しい順</option>
-        <option value="keyword">出典・キーワード順</option>
-      </select>
-      <div id="status-info" class="status-info">待機中</div>
-    </div>
-    <button id="main-fetch-btn" class="btn" onclick="handleFetch()">最新情報を取得</button>
+    <select id="sort-sel" class="sort-select" onchange="renderTable()">
+      <option value="date">新しい順</option>
+      <option value="keyword">出典順</option>
+    </select>
+    <div id="status-info" class="status-info">待機中</div>
+    <button id="main-fetch-btn" class="btn" onclick="handleFetch()">取得</button>
   </div>
 
   <div id="results">
-    <div id="results-info">上の「取得」ボタンを押してください</div>
+    <div id="results-info">取得ボタンを押してください</div>
   </div>
 </main>
 
 <script>
-let keywords = ["公明党","中道","立憲","自民党","国会","麻生区","稲城市","ドローン","新百合ヶ丘"];
+let keywords = JSON.parse(localStorage.getItem('myKeywords')) || ["公明党","自民党","立憲","国会","ドローン","麻生区","新百合ヶ丘"];
+
+// 【変更点】NGワードの初期状態を空っぽ（ [] ）にしました。
+// 過去のテストデータが残っている場合はそれを読み込みます。
+let ngWords = JSON.parse(localStorage.getItem('myNgWords')) || []; 
+
+let visitedLinks = JSON.parse(localStorage.getItem('myVisitedLinks')) || [];
+
 let dataStore = { news: [], major: [], social: [] };
 let currentTab = 'news';
 
@@ -116,120 +118,98 @@ function switchTab(t) {
   currentTab = t;
   document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
   document.getElementById('tab-'+t).classList.add('active');
-  
   document.getElementById('kw-card').style.display = (t === 'news') ? 'block' : 'none';
-  document.getElementById('mj-card').style.display = (t === 'major') ? 'block' : 'none';
-  document.getElementById('sc-card').style.display = (t === 'social') ? 'block' : 'none';
-  
+  document.getElementById('ng-card').style.display = (t === 'major') ? 'none' : 'block';
   renderTable();
 }
 
 function renderChips() {
-  document.getElementById('chips').innerHTML = keywords.map((k, i) =>
-    `<span class="chip">${k}<button class="chip-del" onclick="removeKw(${i})">×</button></span>`
-  ).join('');
+  document.getElementById('chips-kw').innerHTML = keywords.map((k, i) =>
+    `<span class="chip">${k}<button class="chip-del" onclick="removeItem('kw',${i})">×</button></span>`).join('');
+  document.getElementById('chips-ng').innerHTML = ngWords.map((k, i) =>
+    `<span class="chip chip-ng">${k}<button class="chip-del" onclick="removeItem('ng',${i})">×</button></span>`).join('');
 }
-function addKeyword() {
-  const v = document.getElementById('kw-input').value.trim();
-  if (v && !keywords.includes(v)) { keywords.push(v); renderChips(); }
-  document.getElementById('kw-input').value = '';
+
+function addItem(type) {
+  const inp = document.getElementById(type + '-input');
+  const v = inp.value.trim();
+  if (!v) return;
+  if (type === 'kw' && !keywords.includes(v)) keywords.push(v);
+  if (type === 'ng' && !ngWords.includes(v)) ngWords.push(v);
+  saveData();
+  renderChips();
+  inp.value = '';
 }
-function removeKw(i) { keywords.splice(i,1); renderChips(); }
+
+function removeItem(type, i) {
+  if (type === 'kw') keywords.splice(i, 1);
+  if (type === 'ng') ngWords.splice(i, 1);
+  saveData();
+  renderChips();
+}
+
+function saveData() {
+  localStorage.setItem('myKeywords', JSON.stringify(keywords));
+  localStorage.setItem('myNgWords', JSON.stringify(ngWords));
+}
+
+function markAsVisited(link) {
+  if (!visitedLinks.includes(link)) {
+    visitedLinks.push(link);
+    if (visitedLinks.length > 500) visitedLinks.shift();
+    localStorage.setItem('myVisitedLinks', JSON.stringify(visitedLinks));
+    renderTable();
+  }
+}
 
 async function handleFetch() {
-  if (currentTab === 'news') fetchNews();
-  else if (currentTab === 'major') fetchMajor();
-  else if (currentTab === 'social') fetchSocial(false);
-}
-
-async function fetchNews() {
-  dataStore.news = [];
-  document.getElementById('results').innerHTML = '<div id="results-info">ニュースサイトを巡回中...</div>';
-  for (let i = 0; i < keywords.length; i++) {
-    document.getElementById('status-info').textContent = `取得中 ${i+1}/${keywords.length}`;
-    const res = await fetch(`https://monumental-piroshki-d8aafb.netlify.app/.netlify/functions/rss?keyword=${encodeURIComponent(keywords[i])}&type=news`);
-    const items = await res.json();
-    dataStore.news.push(...items.map(it => ({...it, dt: new Date(it.published || 0)})));
-    await new Promise(r => setTimeout(r, 400));
+  const excludeParam = encodeURIComponent(ngWords.join(','));
+  if (currentTab === 'news') {
+    dataStore.news = [];
+    for (let i = 0; i < keywords.length; i++) {
+      document.getElementById('status-info').textContent = `取得中 ${i+1}/${keywords.length}`;
+      const res = await fetch(`https://monumental-piroshki-d8aafb.netlify.app/.netlify/functions/rss?keyword=${encodeURIComponent(keywords[i])}&type=news&exclude=${excludeParam}`);
+      const items = await res.json();
+      dataStore.news.push(...items.map(it => ({...it, dt: new Date(it.published || 0)})));
+      await new Promise(r => setTimeout(r, 300));
+    }
+  } else {
+    const type = currentTab;
+    const kw = type === 'social' ? (document.getElementById('sc-input') ? document.getElementById('sc-input').value : "") : "";
+    document.getElementById('status-info').textContent = '取得中...';
+    const res = await fetch(`https://monumental-piroshki-d8aafb.netlify.app/.netlify/functions/rss?type=${type}&keyword=${encodeURIComponent(kw)}&exclude=${excludeParam}`);
+    dataStore[type] = (await res.json()).map(it => ({...it, dt: new Date(it.published || 0)}));
   }
-  document.getElementById('status-info').textContent = dataStore.news.length + '件完了';
-  renderTable();
-}
-
-async function fetchMajor() {
-  document.getElementById('results').innerHTML = '<div id="results-info">主要トピックスを取得中...</div>';
-  const res = await fetch(`https://monumental-piroshki-d8aafb.netlify.app/.netlify/functions/rss?type=major`);
-  const items = await res.json();
-  dataStore.major = items.map(it => ({...it, dt: new Date(it.published || 0)}));
-  document.getElementById('status-info').textContent = dataStore.major.length + '件表示';
-  renderTable();
-}
-
-async function fetchSocial(isSearch) {
-  const kw = isSearch ? document.getElementById('sc-input').value.trim() : "";
-  document.getElementById('results').innerHTML = '<div id="results-info">ブログ・コラムを取得中...</div>';
-  const res = await fetch(`https://monumental-piroshki-d8aafb.netlify.app/.netlify/functions/rss?type=social&keyword=${encodeURIComponent(kw)}`);
-  const items = await res.json();
-  dataStore.social = items.map(it => ({...it, dt: new Date(it.published || 0)}));
-  
-  document.getElementById('status-info').textContent = (kw ? `「${kw}」の検索結果` : 'はてな＆note 注目記事') + ` ${dataStore.social.length}件`;
+  document.getElementById('status-info').textContent = '完了';
   renderTable();
 }
 
 function renderTable() {
   const data = dataStore[currentTab];
   if (!data || data.length === 0) {
-    document.getElementById('results').innerHTML = '<div id="results-info">「最新情報を取得」を押してください</div>';
+    document.getElementById('results').innerHTML = '<div id="results-info">取得ボタンを押してください</div>';
     return;
   }
   
-  // 【追加】プルダウンの値を取得して並べ替えルールを変える
   const sortBy = document.getElementById('sort-sel').value;
-  
   const sorted = [...data].sort((a,b) => {
-    if (sortBy === 'date') {
-      // 日時の新しい順
-      return b.dt - a.dt;
-    } else {
-      // キーワード・出典順
-      const idxA = keywords.indexOf(a.keyword);
-      const idxB = keywords.indexOf(b.keyword);
-      
-      // 登録キーワード同士なら登録順に並べる
-      if (idxA !== -1 && idxB !== -1) {
-        if (idxA !== idxB) return idxA - idxB;
-      } 
-      // 登録キーワードを優先して上に持ってくる
-      else if (idxA !== -1) return -1;
-      else if (idxB !== -1) return 1;
-      // それ以外（Yahoo!やはてな等）は名前順でグループ化する
-      else if (a.keyword !== b.keyword) {
-        return a.keyword.localeCompare(b.keyword, 'ja');
-      }
-      
-      // キーワードが同じ場合は、その中でさらに新しい順にする
-      return b.dt - a.dt;
-    }
+    if (sortBy === 'date') return b.dt - a.dt;
+    return a.keyword.localeCompare(b.keyword, 'ja') || b.dt - a.dt;
   });
 
   const rows = sorted.map(n => {
     const d = n.dt;
     const dateStr = d.getFullYear() > 2000 ? `${d.getMonth()+1}/${d.getDate()} ${d.getHours()}:${(d.getMinutes()<10?'0':'')+d.getMinutes()}` : '—';
-    return `<tr>
+    const isVisited = visitedLinks.includes(n.link);
+    return `<tr class="${isVisited ? 'visited' : ''}">
       <td><span class="kw-tag">${n.keyword}</span></td>
       <td><div style="line-height:1.4">${n.title}</div></td>
       <td class="date-cell">${dateStr}</td>
-      <td><a class="open-link" href="${n.link}" target="_blank">開く ↗</a></td>
+      <td><a class="open-link" href="${n.link}" target="_blank" onclick="markAsVisited('${n.link}')">開く ↗</a></td>
     </tr>`;
   }).join('');
 
-  document.getElementById('results').innerHTML = `
-    <div class="table-wrap">
-      <table>
-        <thead><tr><th style="width:80px">出典</th><th>タイトル</th><th style="width:100px">日時</th><th style="width:50px">リンク</th></tr></thead>
-        <tbody>${rows}</tbody>
-      </table>
-    </div>`;
+  document.getElementById('results').innerHTML = `<div class="table-wrap"><table><tbody>${rows}</tbody></table></div>`;
 }
 
 renderChips();
