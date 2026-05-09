@@ -18,7 +18,11 @@
     * { box-sizing: border-box; margin: 0; padding: 0; }
     body { font-family: sans-serif; background: var(--bg); color: var(--text); padding-bottom: 4rem; -webkit-tap-highlight-color: transparent; }
     header { background: var(--accent); color: #fff; padding: 1.5rem 1rem; text-align: center; }
-    header h1 { font-size: 1.2rem; }
+    
+    /* ヘッダーの文字を少し調整し、v5の表記を追加 */
+    header h1 { font-size: 1.2rem; display: flex; align-items: center; justify-content: center; gap: 6px; }
+    header h1 .version { font-size: 0.6rem; background: rgba(255,255,255,0.2); padding: 2px 6px; border-radius: 10px; font-weight: normal; }
+
     main { max-width: 900px; margin: 0 auto; padding: 1rem; }
 
     .tabs { display: flex; gap: 4px; margin-bottom: 1rem; border-bottom: 2px solid var(--border); position: sticky; top: 0; background: var(--bg); z-index: 100; }
@@ -47,19 +51,17 @@
     .sort-select { border: 1px solid var(--border); border-radius: 8px; padding: 8px; font-size: 0.8rem; background: #fff; }
     .status-info { font-size: 0.7rem; color: var(--muted); flex: 1; font-weight: bold; text-align: right; }
 
-    /* --- テーブルのデザイン調整 --- */
     .table-wrap { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; overflow: hidden; }
     table { width: 100%; border-collapse: collapse; font-size: 0.85rem; }
     thead th { background: #f9f8f5; padding: 12px 10px; text-align: left; border-bottom: 1px solid var(--border); color: var(--muted); font-size: 0.7rem; text-transform: uppercase; }
     tbody td { padding: 14px 10px; border-bottom: 1px solid var(--border); vertical-align: top; }
     
-    /* 列幅の最適化 */
+    /* 【デザイン改善】列幅の最適化（タイトルを一番広くする） */
     .col-source { width: 1%; white-space: nowrap; padding-right: 4px !important; }
     .col-title { width: 99%; }
     .col-date { width: 1%; white-space: nowrap; padding-left: 4px !important; padding-right: 4px !important; text-align: center; }
     .col-link { width: 1%; white-space: nowrap; padding-left: 4px !important; text-align: right; }
 
-    /* スマホ向けに左右の余白を少し詰めて、表示領域をさらに広げる */
     @media (max-width: 600px) {
       thead th { padding: 10px 6px; }
       tbody td { padding: 14px 6px; }
@@ -78,7 +80,7 @@
 <body>
 
 <header>
-  <h1>📰 News Dashboard</h1>
+  <h1>📰 News Dashboard <span class="version">v5</span></h1>
 </header>
 
 <main>
@@ -142,29 +144,33 @@
 </main>
 
 <script>
-let keywords = ["公明党","自民党","立憲","国会","ドローン","麻生区","新百合ヶ丘"];
-try {
-  const k = JSON.parse(localStorage.getItem('myKeywords'));
-  if (Array.isArray(k)) keywords = k;
-} catch(e) {}
+// 【新機能】壊れたデータを検知して自動修復する関数
+function safeLoadArray(key, defaultVal) {
+  try {
+    const val = localStorage.getItem(key);
+    if (val) {
+      const parsed = JSON.parse(val);
+      if (Array.isArray(parsed)) return parsed;
+    }
+  } catch (e) {
+    console.warn(`[自動修復] ${key} のデータが壊れていたため初期化しました`);
+    localStorage.removeItem(key); // 壊れたデータを消去
+  }
+  return defaultVal;
+}
 
-let ngWords = [];
-try {
-  const n = JSON.parse(localStorage.getItem('myNgWords'));
-  if (Array.isArray(n)) ngWords = n;
-} catch(e) {}
-
-let visitedLinks = [];
-try {
-  const v = JSON.parse(localStorage.getItem('myVisitedLinks'));
-  if (Array.isArray(v)) visitedLinks = v;
-} catch(e) {}
+// 安全にデータを読み込む
+let keywords = safeLoadArray('myKeywords', ["公明党","自民党","立憲","国会","ドローン","麻生区","新百合ヶ丘"]);
+let ngWords = safeLoadArray('myNgWords', []);
+let visitedLinks = safeLoadArray('myVisitedLinks', []);
 
 let savedCount = '10';
 try {
   const c = localStorage.getItem('myFetchCount');
   if (c) savedCount = c;
-} catch(e) {}
+} catch(e) {
+  localStorage.removeItem('myFetchCount');
+}
 
 const countSelEl = document.getElementById('count-sel');
 if (countSelEl) {
@@ -264,7 +270,6 @@ async function handleFetch() {
     document.getElementById('status-info').textContent = '完了';
   } catch (error) {
     document.getElementById('status-info').textContent = '⚠️ 取得エラー';
-    console.error(error);
   } finally {
     if (btn) btn.disabled = false;
     renderTable();
@@ -297,7 +302,6 @@ function renderTable() {
     </tr>`;
   }).join('');
   
-  // HTML生成部分にクラスを割り当てて横幅を制御
   document.getElementById('results').innerHTML = `
     <div class="table-wrap">
       <table>
