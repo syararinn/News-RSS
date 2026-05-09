@@ -13,7 +13,6 @@ exports.handler = async function(event) {
       ];
     } else if (type === 'social') {
       if (!keyword) {
-        // 【追加】はてなホットエントリーに加えて、noteの「話題」「おすすめ」タグの人気記事を追加
         urls = [
           'https://b.hatena.ne.jp/hotentry.rss',
           'https://note.com/hashtag/話題/rss',
@@ -37,15 +36,18 @@ exports.handler = async function(event) {
     const seenLinks = new Set();
 
     for (const url of urls) {
-      const res = await fetch(url);
+      // はてなブックマーク等の読み込みエラーを防ぐため User-Agent を設定
+      const res = await fetch(url, {
+        headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/110.0.0.0 Safari/537.36' }
+      });
       if (!res.ok) continue;
       
       const xml = await res.text();
-      const itemRegex = /<item>([\s\S]*?)<\/item>/g;
+      
+      // 【修正ポイント1】 <item ...> の形式（はてなブックマーク等）にも対応できるように変更
+      const itemRegex = /<item[\s\S]*?>([\s\S]*?)<\/item>/g;
       let match;
       let sourceCount = 0;
-      
-      // 総合ニュース・注目記事は各サイトから15件ずつ多めに取得
       const targetLimit = (type === 'major' || (type === 'social' && !keyword)) ? 15 : count;
 
       while ((match = itemRegex.exec(xml)) !== null && sourceCount < targetLimit) {
@@ -55,7 +57,10 @@ exports.handler = async function(event) {
         const link  = (block.match(/<link>(.*?)<\/link>/) ||
                        block.match(/<link \/>(.*?)<\//))?.[1] ||
                       block.match(/href="(https?[^"]+)"/)?.[1] || '';
-        const pub   = block.match(/<pubDate>(.*?)<\/pubDate>/)?.[1] || '';
+        
+        // 【修正ポイント2】 はてな等の <dc:date> 形式の日付にも対応
+        const pub = (block.match(/<pubDate>(.*?)<\/pubDate>/) || 
+                     block.match(/<dc:date>(.*?)<\/dc:date>/))?.[1] || '';
 
         // 除外設定
         if (keyword === '公明党' && (title.includes('komei.or.jp') || title.includes('公明新聞'))) {
@@ -65,7 +70,6 @@ exports.handler = async function(event) {
         if (title && link && !seenLinks.has(link)) {
           seenLinks.add(link);
           
-          // 【追加】どのサイトから来た記事か分かるようにラベル（出典）を自動判定
           let label = keyword;
           if (type === 'major') label = url.includes('yahoo') ? 'Yahoo!' : 'NHK';
           if (type === 'social' && !keyword) {
