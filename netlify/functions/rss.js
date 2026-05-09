@@ -5,6 +5,19 @@ exports.handler = async function(event) {
   const excludeStr = event.queryStringParameters?.exclude || '';
   const excludeList = excludeStr ? excludeStr.split(',').filter(w => w) : [];
 
+  // 【新機能】タイトルの揺れ（全角半角、新聞社名）をなくして比較用の純粋な文字列を作る関数
+  function normalizeTitle(title) {
+    // 1. タイトル末尾の「 - 〇〇新聞」や「 | 〇〇」などを削除
+    let norm = title.replace(/\s*[-|]\s*[^-|]*$/, '');
+    // 2. 全角の英数字を半角に変換（１１ → 11）
+    norm = norm.replace(/[Ａ-Ｚａ-ｚ０-９]/g, function(s) {
+      return String.fromCharCode(s.charCodeAt(0) - 0xFEE0);
+    });
+    // 3. 空白や細かい記号をすべて消し去る
+    norm = norm.replace(/[\s　、。！？!?,.\-]/g, '');
+    return norm;
+  }
+
   try {
     let urls = [];
     if (type === 'major') {
@@ -19,6 +32,7 @@ exports.handler = async function(event) {
     
     const items = [];
     const seenLinks = new Set();
+    const seenTitles = new Set(); // 【新機能】確認済みのタイトルを保存するリスト
 
     for (const url of urls) {
       const res = await fetch(url, { headers: { 'User-Agent': 'Mozilla/5.0 Chrome/110.0.0.0 Safari/537.36' } });
@@ -35,7 +49,7 @@ exports.handler = async function(event) {
         const link = (block.match(/<link>(.*?)<\/link>/) || block.match(/<link \/>(.*?)<\//))?.[1] || block.match(/href="(https?[^"]+)"/)?.[1] || '';
         const pub = (block.match(/<pubDate>(.*?)<\/pubDate>/) || block.match(/<dc:date>(.*?)<\/dc:date>/))?.[1] || '';
 
-        // 【ルール1：絶対除外】「komei.or.jp」と「電子版プラス」を裏側で強制ブロック
+        // 【ルール1：絶対除外】
         if (title.includes('komei.or.jp') || link.includes('komei.or.jp') || title.includes('電子版プラス') || link.includes('電子版プラス')) {
           continue;
         }
@@ -45,7 +59,14 @@ exports.handler = async function(event) {
         if (isExcluded) continue;
 
         if (title && link && !seenLinks.has(link)) {
+          // 【新機能】タイトルの重複チェック
+          const normTitle = normalizeTitle(title);
+          if (seenTitles.has(normTitle)) {
+             continue; // すでに同じ内容の記事があればスキップ
+          }
+          seenTitles.add(normTitle);
           seenLinks.add(link);
+
           let label = keyword;
           if (type === 'major') label = url.includes('yahoo') ? 'Yahoo!' : 'NHK';
           if (type === 'social' && !keyword) label = url.includes('hatena.ne.jp') ? 'はてな注目' : 'note注目';
