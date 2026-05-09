@@ -29,7 +29,6 @@
     .chip { background: var(--tag-bg); color: var(--tag-text); border: 1px solid var(--tag-border); font-size: 0.75rem; padding: 5px 12px; border-radius: 20px; display: flex; align-items: center; }
     .chip-del { background: none; border: none; margin-left: 6px; cursor: pointer; font-weight: bold; color: var(--tag-text); padding: 2px; }
     
-    /* 【機能4】NGワード用の赤いチップ */
     .chip-ng { background: #fff0f0; color: #c0392b; border-color: #f5bbb7; }
     .chip-ng .chip-del { color: #c0392b; }
 
@@ -39,17 +38,17 @@
     
     .btn { background: var(--accent); color: #fff; border: none; border-radius: 8px; padding: 10px 15px; font-size: 0.9rem; cursor: pointer; font-weight: 600; }
     .btn-secondary { background: #6b6b66; }
+    .btn:disabled { opacity: 0.5; cursor: not-allowed; } /* 取得中のボタングレーアウト用 */
     
     .controls { display: flex; align-items: center; justify-content: space-between; margin-bottom: 1rem; gap: 10px; }
     .sort-select { border: 1px solid var(--border); border-radius: 8px; padding: 8px; font-size: 0.8rem; background: #fff; }
-    .status-info { font-size: 0.7rem; color: var(--muted); flex: 1; }
+    .status-info { font-size: 0.7rem; color: var(--muted); flex: 1; font-weight: bold; }
 
     .table-wrap { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; overflow: hidden; }
     table { width: 100%; border-collapse: collapse; font-size: 0.85rem; }
     thead th { background: #f9f8f5; padding: 12px; text-align: left; border-bottom: 1px solid var(--border); color: var(--muted); font-size: 0.7rem; text-transform: uppercase; }
     tbody td { padding: 14px 12px; border-bottom: 1px solid var(--border); vertical-align: top; }
     
-    /* 【機能2】既読記事を薄くするデザイン */
     tr.visited { opacity: 0.45; filter: grayscale(1); }
     
     .kw-tag { font-size: 0.65rem; padding: 2px 8px; border-radius: 10px; background: var(--tag-bg); color: var(--tag-text); border: 1px solid var(--tag-border); white-space: nowrap; }
@@ -117,7 +116,6 @@
 </main>
 
 <script>
-// 【機能1】LocalStorageからデータを読み込む
 let keywords = JSON.parse(localStorage.getItem('myKeywords')) || ["公明党","自民党","立憲","国会","ドローン","麻生区","新百合ヶ丘"];
 let ngWords = JSON.parse(localStorage.getItem('myNgWords')) || []; 
 let visitedLinks = JSON.parse(localStorage.getItem('myVisitedLinks')) || [];
@@ -125,12 +123,21 @@ let visitedLinks = JSON.parse(localStorage.getItem('myVisitedLinks')) || [];
 let dataStore = { news: [], major: [], social: [] };
 let currentTab = 'news';
 
+// --- 初期化とイベントリスナー（Enterキー対応） ---
+['kw', 'ng'].forEach(type => {
+  document.getElementById(type + '-input').addEventListener('keydown', e => {
+    if (e.key === 'Enter') addItem(type);
+  });
+});
+document.getElementById('sc-input').addEventListener('keydown', e => {
+  if (e.key === 'Enter') handleFetch();
+});
+
 function switchTab(t) {
   currentTab = t;
   document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
   document.getElementById('tab-'+t).classList.add('active');
   
-  // タブごとの表示切り替え
   document.getElementById('kw-card').style.display = (t === 'news') ? 'block' : 'none';
   document.getElementById('ng-card').style.display = (t === 'news') ? 'block' : 'none';
   document.getElementById('mj-card').style.display = (t === 'major') ? 'block' : 'none';
@@ -169,36 +176,49 @@ function saveData() {
   localStorage.setItem('myNgWords', JSON.stringify(ngWords));
 }
 
-// 【機能2】既読（クリック）したリンクを保存して再描画
 function markAsVisited(link) {
   if (!visitedLinks.includes(link)) {
     visitedLinks.push(link);
-    if (visitedLinks.length > 500) visitedLinks.shift(); // 履歴が重くならないよう直近500件に制限
+    if (visitedLinks.length > 500) visitedLinks.shift(); 
     localStorage.setItem('myVisitedLinks', JSON.stringify(visitedLinks));
     renderTable();
   }
 }
 
+// --- 取得処理（連打防止とエラー対応） ---
 async function handleFetch() {
+  const btn = document.getElementById('main-fetch-btn');
+  btn.disabled = true; // ボタン連打を防止
+  
   const excludeParam = encodeURIComponent(ngWords.join(','));
-  if (currentTab === 'news') {
-    dataStore.news = [];
-    for (let i = 0; i < keywords.length; i++) {
-      document.getElementById('status-info').textContent = `取得中 ${i+1}/${keywords.length}`;
-      const res = await fetch(`https://monumental-piroshki-d8aafb.netlify.app/.netlify/functions/rss?keyword=${encodeURIComponent(keywords[i])}&type=news&exclude=${excludeParam}`);
-      const items = await res.json();
-      dataStore.news.push(...items.map(it => ({...it, dt: new Date(it.published || 0)})));
-      await new Promise(r => setTimeout(r, 300));
+  
+  try {
+    if (currentTab === 'news') {
+      dataStore.news = [];
+      for (let i = 0; i < keywords.length; i++) {
+        document.getElementById('status-info').textContent = `取得中 ${i+1}/${keywords.length}`;
+        const res = await fetch(`https://monumental-piroshki-d8aafb.netlify.app/.netlify/functions/rss?keyword=${encodeURIComponent(keywords[i])}&type=news&exclude=${excludeParam}`);
+        if (!res.ok) throw new Error('通信エラー');
+        const items = await res.json();
+        dataStore.news.push(...items.map(it => ({...it, dt: new Date(it.published || 0)})));
+        await new Promise(r => setTimeout(r, 300));
+      }
+    } else {
+      const type = currentTab;
+      const kw = type === 'social' ? document.getElementById('sc-input').value.trim() : "";
+      document.getElementById('status-info').textContent = '取得中...';
+      const res = await fetch(`https://monumental-piroshki-d8aafb.netlify.app/.netlify/functions/rss?type=${type}&keyword=${encodeURIComponent(kw)}&exclude=${excludeParam}`);
+      if (!res.ok) throw new Error('通信エラー');
+      dataStore[type] = (await res.json()).map(it => ({...it, dt: new Date(it.published || 0)}));
     }
-  } else {
-    const type = currentTab;
-    const kw = type === 'social' ? document.getElementById('sc-input').value.trim() : "";
-    document.getElementById('status-info').textContent = '取得中...';
-    const res = await fetch(`https://monumental-piroshki-d8aafb.netlify.app/.netlify/functions/rss?type=${type}&keyword=${encodeURIComponent(kw)}&exclude=${excludeParam}`);
-    dataStore[type] = (await res.json()).map(it => ({...it, dt: new Date(it.published || 0)}));
+    document.getElementById('status-info').textContent = '完了';
+  } catch (error) {
+    document.getElementById('status-info').textContent = '⚠️ 取得エラー（通信環境を確認してください）';
+    console.error(error);
+  } finally {
+    btn.disabled = false; // 処理が終わったらボタンを有効に戻す
+    renderTable();
   }
-  document.getElementById('status-info').textContent = '完了';
-  renderTable();
 }
 
 function renderTable() {
@@ -217,7 +237,6 @@ function renderTable() {
   const rows = sorted.map(n => {
     const d = n.dt;
     const dateStr = d.getFullYear() > 2000 ? `${d.getMonth()+1}/${d.getDate()} ${d.getHours()}:${(d.getMinutes()<10?'0':'')+d.getMinutes()}` : '—';
-    // 【機能2】保存されたリンクのリストに一致すれば、クラスを追加
     const isVisited = visitedLinks.includes(n.link);
     return `<tr class="${isVisited ? 'visited' : ''}">
       <td><span class="kw-tag">${n.keyword}</span></td>
