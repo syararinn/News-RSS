@@ -128,32 +128,189 @@
 </main>
 
 <script>
-let keywords = JSON.parse(localStorage.getItem('myKeywords')) || ["公明党","自民党","立憲","国会","ドローン","麻生区","新百合ヶ丘"];
-let ngWords = JSON.parse(localStorage.getItem('myNgWords')) || []; 
-let visitedLinks = JSON.parse(localStorage.getItem('myVisitedLinks')) || [];
+// 【修正点1】データが壊れていても絶対にエラーで止まらないように安全に読み込む
+let keywords = ["公明党","自民党","立憲","国会","ドローン","麻生区","新百合ヶ丘"];
+try {
+  const k = JSON.parse(localStorage.getItem('myKeywords'));
+  if (Array.isArray(k)) keywords = k;
+} catch(e) {}
 
-// 【機能追加】件数の設定を読み込み・保存
-let savedCount = localStorage.getItem('myFetchCount') || '10';
-document.getElementById('count-sel').value = savedCount;
-document.getElementById('count-sel').addEventListener('change', (e) => {
-  localStorage.setItem('myFetchCount', e.target.value);
-});
+let ngWords = [];
+try {
+  const n = JSON.parse(localStorage.getItem('myNgWords'));
+  if (Array.isArray(n)) ngWords = n;
+} catch(e) {}
+
+let visitedLinks = [];
+try {
+  const v = JSON.parse(localStorage.getItem('myVisitedLinks'));
+  if (Array.isArray(v)) visitedLinks = v;
+} catch(e) {}
+
+let savedCount = '10';
+try {
+  const c = localStorage.getItem('myFetchCount');
+  if (c) savedCount = c;
+} catch(e) {}
+
+const countSelEl = document.getElementById('count-sel');
+if (countSelEl) {
+  countSelEl.value = savedCount;
+  countSelEl.addEventListener('change', (e) => {
+    localStorage.setItem('myFetchCount', e.target.value);
+  });
+}
 
 let dataStore = { news: [], major: [], social: [] };
 let currentTab = 'news';
 
+// 【修正点2】漢字変換中のEnterキー（e.isComposing）は無視して誤動作を防ぐ
 ['kw', 'ng'].forEach(type => {
-  document.getElementById(type + '-input').addEventListener('keydown', e => {
-    if (e.key === 'Enter') addItem(type);
+  const inputEl = document.getElementById(type + '-input');
+  if (inputEl) {
+    inputEl.addEventListener('keydown', e => {
+      if (e.key === 'Enter' && !e.isComposing) {
+        e.preventDefault();
+        addItem(type);
+      }
+    });
+  }
+});
+
+const scInputEl = document.getElementById('sc-input');
+if (scInputEl) {
+  scInputEl.addEventListener('keydown', e => {
+    if (e.key === 'Enter' && !e.isComposing) {
+      e.preventDefault();
+      handleFetch();
+    }
   });
-});
-document.getElementById('sc-input').addEventListener('keydown', e => {
-  if (e.key === 'Enter') handleFetch();
-});
+}
 
 function switchTab(t) {
   currentTab = t;
   document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
   document.getElementById('tab-'+t).classList.add('active');
   
-  document.
+  document.getElementById('kw-card').style.display = (t === 'news') ? 'block' : 'none';
+  document.getElementById('ng-card').style.display = (t === 'news') ? 'block' : 'none';
+  document.getElementById('mj-card').style.display = (t === 'major') ? 'block' : 'none';
+  document.getElementById('sc-card').style.display = (t === 'social') ? 'block' : 'none';
+  
+  const countSel = document.getElementById('count-sel');
+  if (countSel) countSel.style.display = (t === 'news') ? 'inline-block' : 'none';
+  
+  renderTable();
+}
+
+function renderChips() {
+  document.getElementById('chips-kw').innerHTML = keywords.map((k, i) =>
+    `<span class="chip">${k}<button class="chip-del" onclick="removeItem('kw',${i})">×</button></span>`).join('');
+  document.getElementById('chips-ng').innerHTML = ngWords.map((k, i) =>
+    `<span class="chip chip-ng">${k}<button class="chip-del" onclick="removeItem('ng',${i})">×</button></span>`).join('');
+}
+
+function addItem(type) {
+  const inp = document.getElementById(type + '-input');
+  if (!inp) return;
+  const v = inp.value.trim();
+  if (!v) return;
+  if (type === 'kw' && !keywords.includes(v)) keywords.push(v);
+  if (type === 'ng' && !ngWords.includes(v)) ngWords.push(v);
+  saveData();
+  renderChips();
+  inp.value = '';
+}
+
+function removeItem(type, i) {
+  if (type === 'kw') keywords.splice(i, 1);
+  if (type === 'ng') ngWords.splice(i, 1);
+  saveData();
+  renderChips();
+}
+
+function saveData() {
+  localStorage.setItem('myKeywords', JSON.stringify(keywords));
+  localStorage.setItem('myNgWords', JSON.stringify(ngWords));
+}
+
+function markAsVisited(link) {
+  if (!visitedLinks.includes(link)) {
+    visitedLinks.push(link);
+    if (visitedLinks.length > 500) visitedLinks.shift(); 
+    localStorage.setItem('myVisitedLinks', JSON.stringify(visitedLinks));
+    renderTable();
+  }
+}
+
+async function handleFetch() {
+  const btn = document.getElementById('main-fetch-btn');
+  if (btn) btn.disabled = true;
+  
+  const excludeParam = encodeURIComponent(ngWords.join(','));
+  const countSel = document.getElementById('count-sel');
+  const fetchCount = countSel ? countSel.value : '10';
+  
+  try {
+    if (currentTab === 'news') {
+      dataStore.news = [];
+      for (let i = 0; i < keywords.length; i++) {
+        document.getElementById('status-info').textContent = `取得中 ${i+1}/${keywords.length}`;
+        const res = await fetch(`https://monumental-piroshki-d8aafb.netlify.app/.netlify/functions/rss?keyword=${encodeURIComponent(keywords[i])}&type=news&exclude=${excludeParam}&count=${fetchCount}`);
+        if (!res.ok) throw new Error('通信エラー');
+        const items = await res.json();
+        dataStore.news.push(...items.map(it => ({...it, dt: new Date(it.published || 0)})));
+        await new Promise(r => setTimeout(r, 300));
+      }
+    } else {
+      const type = currentTab;
+      const scInput = document.getElementById('sc-input');
+      const kw = (type === 'social' && scInput) ? scInput.value.trim() : "";
+      document.getElementById('status-info').textContent = '取得中...';
+      const res = await fetch(`https://monumental-piroshki-d8aafb.netlify.app/.netlify/functions/rss?type=${type}&keyword=${encodeURIComponent(kw)}&exclude=${excludeParam}`);
+      if (!res.ok) throw new Error('通信エラー');
+      dataStore[type] = (await res.json()).map(it => ({...it, dt: new Date(it.published || 0)}));
+    }
+    document.getElementById('status-info').textContent = '完了';
+  } catch (error) {
+    document.getElementById('status-info').textContent = '⚠️ 取得エラー';
+    console.error(error);
+  } finally {
+    if (btn) btn.disabled = false;
+    renderTable();
+  }
+}
+
+function renderTable() {
+  const data = dataStore[currentTab];
+  if (!data || data.length === 0) {
+    document.getElementById('results').innerHTML = '<div id="results-info">取得ボタンを押してください</div>';
+    return;
+  }
+  const sortSel = document.getElementById('sort-sel');
+  const sortBy = sortSel ? sortSel.value : 'date';
+  
+  const sorted = [...data].sort((a,b) => {
+    if (sortBy === 'date') return b.dt - a.dt;
+    return a.keyword.localeCompare(b.keyword, 'ja') || b.dt - a.dt;
+  });
+  
+  const rows = sorted.map(n => {
+    const d = n.dt;
+    const dateStr = d.getFullYear() > 2000 ? `${d.getMonth()+1}/${d.getDate()} ${d.getHours()}:${(d.getMinutes()<10?'0':'')+d.getMinutes()}` : '—';
+    const isVisited = visitedLinks.includes(n.link);
+    return `<tr class="${isVisited ? 'visited' : ''}">
+      <td><span class="kw-tag">${n.keyword}</span></td>
+      <td><div style="line-height:1.4">${n.title}</div></td>
+      <td class="date-cell">${dateStr}</td>
+      <td><a class="open-link" href="${n.link}" target="_blank" onclick="markAsVisited('${n.link}')">開く ↗</a></td>
+    </tr>`;
+  }).join('');
+  document.getElementById('results').innerHTML = `<div class="table-wrap"><table><tbody>${rows}</tbody></table></div>`;
+}
+
+// 最初の起動時処理
+renderChips();
+</script>
+</body>
+</html>
