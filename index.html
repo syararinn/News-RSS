@@ -56,14 +56,17 @@
     tr.visited { opacity: 0.45; filter: grayscale(1); }
     .kw-tag { font-size: 0.65rem; padding: 2px 6px; border-radius: 10px; background: var(--tag-bg); color: var(--tag-text); border: 1px solid var(--tag-border); white-space: nowrap; display: inline-block;}
     .date-cell { font-size: 0.65rem; color: var(--muted); }
-    .open-link { color: var(--link); text-decoration: none; font-weight: 600; padding: 5px 0; display: inline-block; font-size: 0.8rem;}
+    
+    /* 【変更】矢印だけになるため、文字サイズを大きくしてタップしやすくしました */
+    .open-link { color: var(--link); text-decoration: none; font-weight: bold; padding: 5px 8px; display: inline-block; font-size: 1.1rem; }
+    
     #results-info { text-align: center; padding: 4rem 1rem; color: var(--muted); font-size: 0.9rem; }
   </style>
 </head>
 <body>
 
 <header>
-  <h1>📰 News Dashboard <span class="version">v5</span></h1>
+  <h1>📰 News Dashboard <span class="version">v5.1</span></h1>
 </header>
 
 <main>
@@ -229,7 +232,6 @@ async function handleFetch() {
       dataStore.news = [];
       for (let i = 0; i < keywords.length; i++) {
         document.getElementById('status-info').textContent = `取得中 ${i+1}/${keywords.length}`;
-        // 【超重要】ここを相対パスに変更しました
         const res = await fetch(`/.netlify/functions/rss?keyword=${encodeURIComponent(keywords[i])}&type=news&exclude=${excludeParam}&count=${fetchCount}`);
         if (!res.ok) throw new Error('通信エラー');
         const items = await res.json();
@@ -241,7 +243,6 @@ async function handleFetch() {
       const scInput = document.getElementById('sc-input');
       const kw = (type === 'social' && scInput) ? scInput.value.trim() : "";
       document.getElementById('status-info').textContent = '取得中...';
-      // 【超重要】ここも相対パスに変更しました
       const res = await fetch(`/.netlify/functions/rss?type=${type}&keyword=${encodeURIComponent(kw)}&exclude=${excludeParam}`);
       if (!res.ok) throw new Error('通信エラー');
       dataStore[type] = (await res.json()).map(it => ({...it, dt: new Date(it.published || 0)}));
@@ -269,6 +270,7 @@ function renderTable() {
     return a.keyword.localeCompare(b.keyword, 'ja') || b.dt - a.dt;
   });
   
+  // 【変更】「開く ↗」を「↗」のみにしました
   const rows = sorted.map(n => {
     const d = n.dt;
     const dateStr = d.getFullYear() > 2000 ? `${d.getMonth()+1}/${d.getDate()} ${d.getHours()}:${(d.getMinutes()<10?'0':'')+d.getMinutes()}` : '—';
@@ -277,16 +279,19 @@ function renderTable() {
       <td class="col-source"><span class="kw-tag">${n.keyword}</span></td>
       <td class="col-title"><div style="line-height:1.45; font-size: 0.9rem;">${n.title}</div></td>
       <td class="col-date"><span class="date-cell">${dateStr}</span></td>
-      <td class="col-link"><a class="open-link" href="${n.link}" target="_blank" onclick="markAsVisited('${n.link}')">開く ↗</a></td>
+      <td class="col-link"><a class="open-link" href="${n.link}" target="_blank" onclick="markAsVisited('${n.link}')">↗</a></td>
     </tr>`;
   }).join('');
+  
+  // 【変更】ニュースタブの時だけヘッダーを「キーワード」に変更します
+  const sourceHeader = currentTab === 'news' ? 'キーワード' : '出典';
   
   document.getElementById('results').innerHTML = `
     <div class="table-wrap">
       <table>
         <thead>
           <tr>
-            <th class="col-source">出典</th>
+            <th class="col-source">${sourceHeader}</th>
             <th class="col-title">タイトル</th>
             <th class="col-date">日時</th>
             <th class="col-link">リンク</th>
