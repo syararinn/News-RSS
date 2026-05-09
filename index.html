@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>多角ニュース収集アプリ v3</title>
+  <title>多角ニュース収集アプリ v4</title>
   <style>
     :root {
       --bg: #f5f4f0; --surface: #ffffff; --border: #e2e0d8; --text: #1a1a18;
@@ -39,6 +39,12 @@
 
     .controls { display: flex; align-items: center; justify-content: space-between; margin-bottom: 1rem; }
     .status-info { font-size: 0.75rem; color: var(--muted); }
+    
+    /* 【追加】プルダウンのデザイン */
+    .sort-select {
+      border: 1px solid var(--border); border-radius: 6px; padding: 6px 10px;
+      font-size: 0.8rem; background: var(--surface); color: var(--text); outline: none;
+    }
 
     .table-wrap { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; overflow: hidden; }
     table { width: 100%; border-collapse: collapse; font-size: 0.85rem; }
@@ -86,7 +92,13 @@
   </div>
 
   <div class="controls">
-    <div id="status-info" class="status-info">待機中</div>
+    <div style="display: flex; gap: 10px; align-items: center;">
+      <select id="sort-sel" class="sort-select" onchange="renderTable()">
+        <option value="date">日時の新しい順</option>
+        <option value="keyword">出典・キーワード順</option>
+      </select>
+      <div id="status-info" class="status-info">待機中</div>
+    </div>
     <button id="main-fetch-btn" class="btn" onclick="handleFetch()">最新情報を取得</button>
   </div>
 
@@ -160,7 +172,6 @@ async function fetchSocial(isSearch) {
   const items = await res.json();
   dataStore.social = items.map(it => ({...it, dt: new Date(it.published || 0)}));
   
-  // 【変更】取得完了時のメッセージを「はてな＆note総合」に変更
   document.getElementById('status-info').textContent = (kw ? `「${kw}」の検索結果` : 'はてな＆note 注目記事') + ` ${dataStore.social.length}件`;
   renderTable();
 }
@@ -172,7 +183,35 @@ function renderTable() {
     return;
   }
   
-  const sorted = [...data].sort((a,b) => b.dt - a.dt);
+  // 【追加】プルダウンの値を取得して並べ替えルールを変える
+  const sortBy = document.getElementById('sort-sel').value;
+  
+  const sorted = [...data].sort((a,b) => {
+    if (sortBy === 'date') {
+      // 日時の新しい順
+      return b.dt - a.dt;
+    } else {
+      // キーワード・出典順
+      const idxA = keywords.indexOf(a.keyword);
+      const idxB = keywords.indexOf(b.keyword);
+      
+      // 登録キーワード同士なら登録順に並べる
+      if (idxA !== -1 && idxB !== -1) {
+        if (idxA !== idxB) return idxA - idxB;
+      } 
+      // 登録キーワードを優先して上に持ってくる
+      else if (idxA !== -1) return -1;
+      else if (idxB !== -1) return 1;
+      // それ以外（Yahoo!やはてな等）は名前順でグループ化する
+      else if (a.keyword !== b.keyword) {
+        return a.keyword.localeCompare(b.keyword, 'ja');
+      }
+      
+      // キーワードが同じ場合は、その中でさらに新しい順にする
+      return b.dt - a.dt;
+    }
+  });
+
   const rows = sorted.map(n => {
     const d = n.dt;
     const dateStr = d.getFullYear() > 2000 ? `${d.getMonth()+1}/${d.getDate()} ${d.getHours()}:${(d.getMinutes()<10?'0':'')+d.getMinutes()}` : '—';
