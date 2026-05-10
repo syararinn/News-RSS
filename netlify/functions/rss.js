@@ -5,17 +5,15 @@ exports.handler = async function(event) {
   const excludeStr = event.queryStringParameters?.exclude || '';
   const excludeList = excludeStr ? excludeStr.split(',').filter(w => w) : [];
 
-  // 【新機能】タイトルの揺れ（全角半角、新聞社名）をなくして比較用の純粋な文字列を作る関数
   function normalizeTitle(title) {
-    // 1. タイトル末尾の「 - 〇〇新聞」や「 | 〇〇」などを削除
     let norm = title.replace(/\s*[-|]\s*[^-|]*$/, '');
-    // 2. 全角の英数字を半角に変換（１１ → 11）
-    norm = norm.replace(/[Ａ-Ｚａ-ｚ０-９]/g, function(s) {
-      return String.fromCharCode(s.charCodeAt(0) - 0xFEE0);
-    });
-    // 3. 空白や細かい記号をすべて消し去る
-    norm = norm.replace(/[\s　、。！？!?,.\-]/g, '');
+    norm = norm.replace(/[^\p{L}\p{N}]/gu, ''); 
     return norm;
+  }
+
+  // 画像リンクかどうかを判定する関数
+  function isImageLink(link) {
+    return link.includes('/images') || link.includes('/photo') || link.includes('/pict');
   }
 
   try {
@@ -31,8 +29,7 @@ exports.handler = async function(event) {
     }
     
     const items = [];
-    const seenLinks = new Set();
-    const seenTitles = new Set(); // 【新機能】確認済みのタイトルを保存するリスト
+    const uniqueItemsMap = new Map(); // 重複チェックとすり替え用のメモ帳
 
     for (const url of urls) {
       const res = await fetch(url, { headers: { 'User-Agent': 'Mozilla/5.0 Chrome/110.0.0.0 Safari/537.36' } });
@@ -41,7 +38,7 @@ exports.handler = async function(event) {
       const itemRegex = /<item[\s\S]*?>([\s\S]*?)<\/item>/g;
       let match;
       let sourceCount = 0;
-      const targetLimit = (type === 'major' || (type === 'social' && !keyword)) ? 15 : count;
+      const targetLimit = count;
 
       while ((match = itemRegex.exec(xml)) !== null && sourceCount < targetLimit) {
         const block = match[1];
@@ -49,29 +46,36 @@ exports.handler = async function(event) {
         const link = (block.match(/<link>(.*?)<\/link>/) || block.match(/<link \/>(.*?)<\//))?.[1] || block.match(/href="(https?[^"]+)"/)?.[1] || '';
         const pub = (block.match(/<pubDate>(.*?)<\/pubDate>/) || block.match(/<dc:date>(.*?)<\/dc:date>/))?.[1] || '';
 
-        // 【ルール1：絶対除外】
         if (title.includes('komei.or.jp') || link.includes('komei.or.jp') || title.includes('電子版プラス') || link.includes('電子版プラス')) {
           continue;
         }
 
-        // 【ルール2：画面からの除外】
         const isExcluded = excludeList.length > 0 && excludeList.some(word => title.includes(word) || link.includes(word));
         if (isExcluded) continue;
 
-        if (title && link && !seenLinks.has(link)) {
-          // 【新機能】タイトルの重複チェック
+        if (title && link) {
           const normTitle = normalizeTitle(title);
-          if (seenTitles.has(normTitle)) {
-             continue; // すでに同じ内容の記事があればスキップ
-          }
-          seenTitles.add(normTitle);
-          seenLinks.add(link);
-
+          
           let label = keyword;
           if (type === 'major') label = url.includes('yahoo') ? 'Yahoo!' : 'NHK';
           if (type === 'social' && !keyword) label = url.includes('hatena.ne.jp') ? 'はてな注目' : 'note注目';
           if (type === 'social' && keyword) label = url.includes('note') ? 'note' : 'はてな';
-          items.push({ keyword: label, title, link, published: pub });
+
+          // 【新機能】すでに同じタイトルの記事が存在するかチェック
+          if (uniqueItemsMap.has(normTitle)) {
+            const existingItem = uniqueItemsMap.get(normTitle);
+            // 既存の記事が「画像リンク」で、新しい記事が「本文リンク」なら、中身を本文にすり替える
+            if (isImageLink(existingItem.link) && !isImageLink(link)) {
+              existingItem.link = link;
+              existingItem.title = title;
+            }
+            continue;
+          }
+
+          // 新しい記事ならそのまま追加
+          const newItem = { keyword: label, title, link, published: pub };
+          uniqueItemsMap.set(normTitle, newItem);
+          items.push(newItem);
           sourceCount++;
         }
       }
