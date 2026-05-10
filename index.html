@@ -38,8 +38,9 @@
     .btn-secondary { background: #6b6b66; }
     .btn:disabled { opacity: 0.5; cursor: not-allowed; }
     .controls { display: flex; align-items: center; justify-content: space-between; margin-bottom: 1rem; gap: 10px; }
+    .controls-left { display: flex; gap: 6px; flex-wrap: wrap; flex: 1; }
     .sort-select { border: 1px solid var(--border); border-radius: 8px; padding: 8px; font-size: 0.8rem; background: #fff; }
-    .status-info { font-size: 0.7rem; color: var(--muted); flex: 1; font-weight: bold; text-align: right; }
+    .status-info { font-size: 0.7rem; color: var(--muted); font-weight: bold; text-align: right; white-space: nowrap; }
     .table-wrap { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; overflow: hidden; }
     table { width: 100%; border-collapse: collapse; font-size: 0.85rem; }
     thead th { background: #f9f8f5; padding: 12px 10px; text-align: left; border-bottom: 1px solid var(--border); color: var(--muted); font-size: 0.7rem; text-transform: uppercase; }
@@ -54,7 +55,8 @@
       main { padding: 0.5rem; }
     }
     tr.visited { opacity: 0.45; filter: grayscale(1); }
-    .kw-tag { font-size: 0.65rem; padding: 2px 6px; border-radius: 10px; background: var(--tag-bg); color: var(--tag-text); border: 1px solid var(--tag-border); white-space: nowrap; display: inline-block;}
+    .kw-tag { font-size: 0.65rem; padding: 2px 6px; border-radius: 10px; background: var(--tag-bg); color: var(--tag-text); border: 1px solid var(--tag-border); white-space: nowrap; display: inline-block; margin-bottom: 2px;}
+    .cat-tag { background: #eef2f7; color: #34495e; border-color: #cdd9e5; margin-right: 4px; } /* カテゴリ用の新しいタグデザイン */
     .date-cell { font-size: 0.65rem; color: var(--muted); }
     .open-link { color: var(--link); text-decoration: none; font-weight: bold; padding: 5px 8px; display: inline-block; font-size: 1.1rem; }
     #results-info { text-align: center; padding: 4rem 1rem; color: var(--muted); font-size: 0.9rem; }
@@ -63,7 +65,7 @@
 <body>
 
 <header>
-  <h1>📰 News Dashboard <span class="version">v5.6</span></h1>
+  <h1>📰 News Dashboard <span class="version">v5.7</span></h1>
 </header>
 
 <main>
@@ -83,7 +85,7 @@
   </div>
 
   <div id="mj-card" class="card" style="display:none">
-    <p style="font-size:0.85rem; color:var(--muted)">Yahoo!トピックスとNHKニュースから、主要な最新ニュースを一括取得します。</p>
+    <p style="font-size:0.85rem; color:var(--muted)">Yahoo!トピックスなどから主要ニュースを取得し、6つのカテゴリに自動仕分けします。</p>
   </div>
 
   <div id="sc-card" class="card" style="display:none">
@@ -104,7 +106,7 @@
   </div>
 
   <div class="controls">
-    <div style="display: flex; gap: 8px;">
+    <div class="controls-left">
       <select id="count-sel" class="sort-select">
         <option value="10">10件</option>
         <option value="20">20件</option>
@@ -116,9 +118,22 @@
         <option value="date">新しい順</option>
         <option id="sort-opt-keyword" value="keyword">キーワード順</option>
       </select>
+      
+      <select id="major-cat-sel" class="sort-select" style="display:none;" onchange="renderTable()">
+        <option value="all">全カテゴリ</option>
+        <option value="政治">🏛 政治</option>
+        <option value="社会">🚨 社会</option>
+        <option value="国際">🌍 国際</option>
+        <option value="芸能">✨ 芸能</option>
+        <option value="スポーツ">⚾ スポーツ</option>
+        <option value="その他">📌 その他</option>
+      </select>
     </div>
-    <div id="status-info" class="status-info">待機中</div>
-    <button id="main-fetch-btn" class="btn" onclick="handleFetch()">取得</button>
+    
+    <div style="display: flex; align-items: center; gap: 8px;">
+      <div id="status-info" class="status-info">待機中</div>
+      <button id="main-fetch-btn" class="btn" onclick="handleFetch()">取得</button>
+    </div>
   </div>
 
   <div id="results">
@@ -171,6 +186,10 @@ function switchTab(t) {
   const sortOptKeyword = document.getElementById('sort-opt-keyword');
   if (sortOptKeyword) sortOptKeyword.textContent = (t === 'news') ? 'キーワード順' : '出典順';
   
+  // 【新機能】主要タブの時だけカテゴリフィルターを表示
+  const majorCatSel = document.getElementById('major-cat-sel');
+  if (majorCatSel) majorCatSel.style.display = (t === 'major') ? 'inline-block' : 'none';
+  
   renderTable();
 }
 
@@ -218,6 +237,16 @@ function isImageLink(link) {
   return link.includes('/images') || link.includes('/photo') || link.includes('/pict');
 }
 
+// 【新機能】記事のタイトルから単語を読み取り、自動でカテゴリ分けする関数
+function autoCategorize(title) {
+  if (/政治|首相|国会|議員|参院|衆院|自民|立憲|公明|維新|共産|国民民主|岸田|政策|法案|大臣|政府|選挙|政権|裏金|与党|野党|日銀|財務|閣僚/.test(title)) return '政治';
+  if (/国際|大統領|米|アメリカ|中国|ロシア|ウクライナ|韓国|北朝鮮|台湾|イスラエル|ガザ|国連|バイデン|トランプ|プーチン|首脳|外相|海外|円相場|ドル|欧州/.test(title)) return '国際';
+  if (/スポーツ|野球|サッカー|MLB|大谷|ホームラン|五輪|オリンピック|優勝|監督|選手|試合|バレー|バスケ|相撲|競馬|大会|連勝|打者|投手|ゴルフ|陸上/.test(title)) return 'スポーツ';
+  if (/芸能|アイドル|映画|ドラマ|俳優|女優|タレント|ジャニーズ|SMILE-UP|乃木坂|AKB|アニメ|公開|放送|熱愛|結婚|離婚|ライブ|ツアー|アーティスト|音楽/.test(title)) return '芸能';
+  if (/社会|逮捕|容疑者|事件|事故|裁判|判決|地震|震度|津波|台風|気象|警報|感染|詐欺|死亡|火災|遺体|被害|警察|警視庁|殺人|消防|調査/.test(title)) return '社会';
+  return 'その他';
+}
+
 async function handleFetch() {
   const btn = document.getElementById('main-fetch-btn');
   if (btn) btn.disabled = true;
@@ -242,7 +271,6 @@ async function handleFetch() {
       
       for (const item of dataStore.news) {
         let norm = item.title.replace(/\s*[-|]\s*[^-|]*$/, '');
-        // 【改良】画面側でもカッコの中身を丸ごと消去する
         norm = norm.replace(/[（\(［\[【][^）\)］\]】]*[）\)］\]】]/g, '');
         norm = norm.replace(/[^\p{L}\p{N}]/gu, '');
         
@@ -278,15 +306,31 @@ async function handleFetch() {
 }
 
 function renderTable() {
-  const data = dataStore[currentTab];
-  if (!data || data.length === 0) {
+  let displayData = dataStore[currentTab];
+  if (!displayData || displayData.length === 0) {
     document.getElementById('results').innerHTML = '<div id="results-info">取得ボタンを押してください</div>';
     return;
   }
+  
+  // 【新機能】主要タブの時は、自動でカテゴリを振り分けてから絞り込む
+  if (currentTab === 'major') {
+    displayData.forEach(item => {
+      if (!item.category) item.category = autoCategorize(item.title);
+    });
+    const catFilter = document.getElementById('major-cat-sel').value;
+    if (catFilter !== 'all') {
+      displayData = displayData.filter(n => n.category === catFilter);
+    }
+    if (displayData.length === 0) {
+      document.getElementById('results').innerHTML = `<div id="results-info">このカテゴリの記事はありません</div>`;
+      return;
+    }
+  }
+
   const sortSel = document.getElementById('sort-sel');
   const sortBy = sortSel ? sortSel.value : 'date';
   
-  const sorted = [...data].sort((a,b) => {
+  const sorted = [...displayData].sort((a,b) => {
     if (sortBy === 'date') return b.dt - a.dt;
     return a.keyword.localeCompare(b.keyword, 'ja') || b.dt - a.dt;
   });
@@ -295,8 +339,12 @@ function renderTable() {
     const d = n.dt;
     const dateStr = d.getFullYear() > 2000 ? `${d.getMonth()+1}/${d.getDate()} ${d.getHours()}:${(d.getMinutes()<10?'0':'')+d.getMinutes()}` : '—';
     const isVisited = visitedLinks.includes(n.link);
+    
+    // 主要タブの時だけ、カテゴリ用の青っぽいタグを表示する
+    const catTagHtml = (currentTab === 'major') ? `<span class="kw-tag cat-tag">${n.category}</span><br>` : '';
+    
     return `<tr class="${isVisited ? 'visited' : ''}">
-      <td class="col-source"><span class="kw-tag">${n.keyword}</span></td>
+      <td class="col-source">${catTagHtml}<span class="kw-tag">${n.keyword}</span></td>
       <td class="col-title"><div style="line-height:1.45; font-size: 0.9rem;">${n.title}</div></td>
       <td class="col-date"><span class="date-cell">${dateStr}</span></td>
       <td class="col-link"><a class="open-link" href="${n.link}" target="_blank" onclick="markAsVisited('${n.link}')">↗</a></td>
