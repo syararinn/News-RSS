@@ -63,7 +63,7 @@
 <body>
 
 <header>
-  <h1>📰 News Dashboard <span class="version">v5.2</span></h1>
+  <h1>📰 News Dashboard <span class="version">v5.5</span></h1>
 </header>
 
 <main>
@@ -83,7 +83,7 @@
   </div>
 
   <div id="mj-card" class="card" style="display:none">
-    <p style="font-size:0.85rem; color:var(--muted)">Yahoo!トピックスとNHKニュースから、今現在の主要な最新ニュースを時系列で一括取得します。</p>
+    <p style="font-size:0.85rem; color:var(--muted)">Yahoo!トピックスとNHKニュースから、主要な最新ニュースを一括取得します。</p>
   </div>
 
   <div id="sc-card" class="card" style="display:none">
@@ -106,11 +106,11 @@
   <div class="controls">
     <div style="display: flex; gap: 8px;">
       <select id="count-sel" class="sort-select">
-        <option value="5">5件</option>
         <option value="10">10件</option>
-        <option value="15">15件</option>
         <option value="20">20件</option>
+        <option value="30">30件</option>
         <option value="50">50件</option>
+        <option value="100">100件</option>
       </select>
       <select id="sort-sel" class="sort-select" onchange="renderTable()">
         <option value="date">新しい順</option>
@@ -144,14 +144,7 @@ let keywords = safeLoadArray('myKeywords', ["公明党","自民党","立憲","�
 let ngWords = safeLoadArray('myNgWords', []);
 let visitedLinks = safeLoadArray('myVisitedLinks', []);
 
-let savedCount = '10';
-try {
-  const c = localStorage.getItem('myFetchCount');
-  if (c) savedCount = c;
-} catch(e) {
-  localStorage.removeItem('myFetchCount');
-}
-
+let savedCount = localStorage.getItem('myFetchCount') || '20';
 const countSelEl = document.getElementById('count-sel');
 if (countSelEl) {
   countSelEl.value = savedCount;
@@ -171,14 +164,12 @@ function switchTab(t) {
   document.getElementById('ng-card').style.display = (t === 'news') ? 'block' : 'none';
   document.getElementById('mj-card').style.display = (t === 'major') ? 'block' : 'none';
   document.getElementById('sc-card').style.display = (t === 'social') ? 'block' : 'none';
-  const countSel = document.getElementById('count-sel');
-  if (countSel) countSel.style.display = (t === 'news') ? 'inline-block' : 'none';
   
-  // 【新機能】タブに応じてプルダウンの文字を切り替え
+  const countSel = document.getElementById('count-sel');
+  if (countSel) countSel.style.display = 'inline-block';
+  
   const sortOptKeyword = document.getElementById('sort-opt-keyword');
-  if (sortOptKeyword) {
-    sortOptKeyword.textContent = (t === 'news') ? 'キーワード順' : '出典順';
-  }
+  if (sortOptKeyword) sortOptKeyword.textContent = (t === 'news') ? 'キーワード順' : '出典順';
   
   renderTable();
 }
@@ -223,13 +214,17 @@ function markAsVisited(link) {
   }
 }
 
+// 画面側での画像リンク判定
+function isImageLink(link) {
+  return link.includes('/images') || link.includes('/photo') || link.includes('/pict');
+}
+
 async function handleFetch() {
   const btn = document.getElementById('main-fetch-btn');
   if (btn) btn.disabled = true;
   
   const excludeParam = encodeURIComponent(ngWords.join(','));
-  const countSel = document.getElementById('count-sel');
-  const fetchCount = countSel ? countSel.value : '10';
+  const fetchCount = document.getElementById('count-sel').value;
   
   try {
     if (currentTab === 'news') {
@@ -242,12 +237,34 @@ async function handleFetch() {
         dataStore.news.push(...items.map(it => ({...it, dt: new Date(it.published || 0)})));
         await new Promise(r => setTimeout(r, 300));
       }
+      
+      const uniqueNews = [];
+      const seenTitlesMap = new Map();
+      
+      for (const item of dataStore.news) {
+        let norm = item.title.replace(/\s*[-|]\s*[^-|]*$/, '');
+        norm = norm.replace(/[^\p{L}\p{N}]/gu, '');
+        
+        if (seenTitlesMap.has(norm)) {
+          // すでに同じタイトルの記事がある場合、アップグレードできるか確認
+          const existingItem = seenTitlesMap.get(norm);
+          if (isImageLink(existingItem.link) && !isImageLink(item.link)) {
+            existingItem.link = item.link;
+            existingItem.title = item.title;
+          }
+        } else {
+          seenTitlesMap.set(norm, item);
+          uniqueNews.push(item);
+        }
+      }
+      dataStore.news = uniqueNews;
+      
     } else {
       const type = currentTab;
       const scInput = document.getElementById('sc-input');
       const kw = (type === 'social' && scInput) ? scInput.value.trim() : "";
       document.getElementById('status-info').textContent = '取得中...';
-      const res = await fetch(`/.netlify/functions/rss?type=${type}&keyword=${encodeURIComponent(kw)}&exclude=${excludeParam}`);
+      const res = await fetch(`/.netlify/functions/rss?type=${type}&keyword=${encodeURIComponent(kw)}&exclude=${excludeParam}&count=${fetchCount}`);
       if (!res.ok) throw new Error('通信エラー');
       dataStore[type] = (await res.json()).map(it => ({...it, dt: new Date(it.published || 0)}));
     }
@@ -305,7 +322,6 @@ function renderTable() {
 }
 
 renderChips();
-// 初期表示のプルダウン文字合わせ
 switchTab(currentTab);
 </script>
 </body>
