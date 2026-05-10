@@ -7,11 +7,11 @@ exports.handler = async function(event) {
 
   function normalizeTitle(title) {
     let norm = title.replace(/\s*[-|]\s*[^-|]*$/, '');
+    norm = norm.replace(/[（\(［\[【][^）\)］\]】]*[）\)］\]】]/g, '');
     norm = norm.replace(/[^\p{L}\p{N}]/gu, ''); 
     return norm;
   }
 
-  // 画像リンクかどうかを判定する関数
   function isImageLink(link) {
     return link.includes('/images') || link.includes('/photo') || link.includes('/pict');
   }
@@ -19,7 +19,15 @@ exports.handler = async function(event) {
   try {
     let urls = [];
     if (type === 'major') {
-      urls = ['https://news.yahoo.co.jp/rss/topics/top-picks.xml', 'https://www.nhk.or.jp/rss/news/cat0.xml'];
+      // 【大増強】YahooとNHKに加え、Googleトップ、ライブドア、朝日新聞、読売新聞を助っ人として追加！
+      urls = [
+        'https://news.yahoo.co.jp/rss/topics/top-picks.xml',
+        'https://www.nhk.or.jp/rss/news/cat0.xml',
+        'https://news.google.com/rss?hl=ja&gl=JP&ceid=JP:ja',
+        'https://news.livedoor.com/topics/rss/top.xml',
+        'https://rss.asahi.com/rss/asahi/newsheadlines.rdf',
+        'https://www.yomiuri.co.jp/rss/news/top.rdf'
+      ];
     } else if (type === 'social') {
       urls = !keyword ? ['https://b.hatena.ne.jp/hotentry.rss', 'https://note.com/hashtag/話題/rss', 'https://note.com/hashtag/おすすめ/rss']
                       : [`https://note.com/hashtag/${encodeURIComponent(keyword)}/rss`, `https://b.hatena.ne.jp/search/tag?q=${encodeURIComponent(keyword)}&mode=rss`];
@@ -29,7 +37,7 @@ exports.handler = async function(event) {
     }
     
     const items = [];
-    const uniqueItemsMap = new Map(); // 重複チェックとすり替え用のメモ帳
+    const uniqueItemsMap = new Map(); 
 
     for (const url of urls) {
       const res = await fetch(url, { headers: { 'User-Agent': 'Mozilla/5.0 Chrome/110.0.0.0 Safari/537.36' } });
@@ -57,14 +65,23 @@ exports.handler = async function(event) {
           const normTitle = normalizeTitle(title);
           
           let label = keyword;
-          if (type === 'major') label = url.includes('yahoo') ? 'Yahoo!' : 'NHK';
-          if (type === 'social' && !keyword) label = url.includes('hatena.ne.jp') ? 'はてな注目' : 'note注目';
-          if (type === 'social' && keyword) label = url.includes('note') ? 'note' : 'はてな';
+          if (type === 'major') {
+            // 【変更】取得したサイトに合わせて、画面に表示する「出典タグ」の名前を切り替える
+            if (url.includes('yahoo')) label = 'Yahoo!';
+            else if (url.includes('nhk')) label = 'NHK';
+            else if (url.includes('google')) label = 'Google';
+            else if (url.includes('livedoor')) label = 'ライブドア';
+            else if (url.includes('asahi')) label = '朝日新聞';
+            else if (url.includes('yomiuri')) label = '読売新聞';
+            else label = '主要';
+          } else if (type === 'social' && !keyword) {
+            label = url.includes('hatena.ne.jp') ? 'はてな注目' : 'note注目';
+          } else if (type === 'social' && keyword) {
+            label = url.includes('note') ? 'note' : 'はてな';
+          }
 
-          // 【新機能】すでに同じタイトルの記事が存在するかチェック
           if (uniqueItemsMap.has(normTitle)) {
             const existingItem = uniqueItemsMap.get(normTitle);
-            // 既存の記事が「画像リンク」で、新しい記事が「本文リンク」なら、中身を本文にすり替える
             if (isImageLink(existingItem.link) && !isImageLink(link)) {
               existingItem.link = link;
               existingItem.title = title;
@@ -72,7 +89,6 @@ exports.handler = async function(event) {
             continue;
           }
 
-          // 新しい記事ならそのまま追加
           const newItem = { keyword: label, title, link, published: pub };
           uniqueItemsMap.set(normTitle, newItem);
           items.push(newItem);
