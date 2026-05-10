@@ -63,7 +63,7 @@
 <body>
 
 <header>
-  <h1>📰 News Dashboard <span class="version">v5.5</span></h1>
+  <h1>📰 News Dashboard <span class="version">v5.6</span></h1>
 </header>
 
 <main>
@@ -214,7 +214,6 @@ function markAsVisited(link) {
   }
 }
 
-// 画面側での画像リンク判定
 function isImageLink(link) {
   return link.includes('/images') || link.includes('/photo') || link.includes('/pict');
 }
@@ -243,10 +242,11 @@ async function handleFetch() {
       
       for (const item of dataStore.news) {
         let norm = item.title.replace(/\s*[-|]\s*[^-|]*$/, '');
+        // 【改良】画面側でもカッコの中身を丸ごと消去する
+        norm = norm.replace(/[（\(［\[【][^）\)］\]】]*[）\)］\]】]/g, '');
         norm = norm.replace(/[^\p{L}\p{N}]/gu, '');
         
         if (seenTitlesMap.has(norm)) {
-          // すでに同じタイトルの記事がある場合、アップグレードできるか確認
           const existingItem = seenTitlesMap.get(norm);
           if (isImageLink(existingItem.link) && !isImageLink(item.link)) {
             existingItem.link = item.link;
