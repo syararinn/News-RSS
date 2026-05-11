@@ -125,11 +125,10 @@ exports.handler = async function(event) {
       const normTitle = normalizeTitle(item.title);
       if (uniqueMap.has(normTitle)) {
         const existing = uniqueMap.get(normTitle);
-        // 【重要】既存がノーマルで、新しい方がカテゴリ持ち（政治・社会）なら、カテゴリ版を優先する
+        // 既存がノーマルで、新しい方がカテゴリ持ち（政治・社会）なら優先する
         if (!existing.category && item.category) {
           uniqueMap.set(normTitle, item);
         }
-        // 画像リンク回避ルールも維持
         if (isImageLink(existing.link) && !isImageLink(item.link)) {
           existing.link = item.link;
           existing.title = item.title;
