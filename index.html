@@ -16,7 +16,7 @@
       --tag-bg: #eef7f2; --tag-border: #b5d9c5; --tag-text: #1a5c38; --link: #1a5c38;
     }
     * { box-sizing: border-box; margin: 0; padding: 0; }
-    body { font-family: sans-serif; background: var(--bg); color: var(--text); padding-bottom: 4rem; -webkit-tap-highlight-color: transparent; }
+    body { font-family: -apple-system, BlinkMacSystemFont, sans-serif; background: var(--bg); color: var(--text); padding-bottom: max(4rem, env(safe-area-inset-bottom)); -webkit-tap-highlight-color: transparent; }
     header { background: var(--accent); color: #fff; padding: 1.5rem 1rem; text-align: center; }
     header h1 { font-size: 1.2rem; display: flex; align-items: center; justify-content: center; gap: 6px; }
     header h1 .version { font-size: 0.6rem; background: rgba(255,255,255,0.2); padding: 2px 6px; border-radius: 10px; font-weight: normal; }
@@ -50,22 +50,76 @@
     .col-date { width: 1%; white-space: nowrap; padding-left: 4px !important; padding-right: 4px !important; text-align: center; }
     .col-link { width: 1%; white-space: nowrap; padding-left: 4px !important; text-align: right; }
     @media (max-width: 600px) {
+      header { padding: 1rem; }
+      header h1 { font-size: 1rem; }
+      main { padding: 0.4rem; }
+      .card { padding: 0.8rem; margin-bottom: 0.6rem; }
+      .chip { font-size: 0.8rem; padding: 6px 12px; }
+      .chip-del { font-size: 1rem; padding: 4px 6px; min-width: 28px; min-height: 28px; display: flex; align-items: center; justify-content: center; }
+      .btn { padding: 12px 16px; font-size: 1rem; min-height: 44px; }
+      .sort-select { font-size: 0.85rem; padding: 10px 8px; min-height: 44px; }
+      .input-group input { font-size: 1rem; padding: 12px 10px; min-height: 44px; }
+      .tab-btn { font-size: 0.8rem; padding: 14px 4px; min-height: 48px; }
       thead th { padding: 10px 6px; }
-      tbody td { padding: 14px 6px; }
-      main { padding: 0.5rem; }
+      tbody td { padding: 12px 6px; }
+      .col-source { display: none; }
+      .open-link { font-size: 1.4rem; padding: 8px 10px; min-width: 44px; min-height: 44px; display: flex; align-items: center; justify-content: center; }
+      .date-day { font-size: 0.7rem; }
+      .date-time { font-size: 0.7rem; }
+      .kw-tag { font-size: 0.7rem; }
+      .badge-new { font-size: 0.65rem; }
+      .tabs { padding-top: env(safe-area-inset-top, 0px); }
+      .mobile-meta { display: block; }
     }
     tr.visited { opacity: 0.45; filter: grayscale(1); }
+    .badge-new { display: inline-block; font-size: 0.6rem; font-weight: 700; padding: 1px 5px; border-radius: 4px; background: #fff3cd; color: #7d5a00; border: 1px solid #ffe08a; margin-right: 5px; vertical-align: middle; }
+    .date-day  { font-size: 0.65rem; color: var(--muted); display: block; white-space: nowrap; }
+    .date-time { font-size: 0.65rem; color: var(--muted); display: block; white-space: nowrap; }
     .kw-tag { font-size: 0.65rem; padding: 2px 6px; border-radius: 10px; background: var(--tag-bg); color: var(--tag-text); border: 1px solid var(--tag-border); white-space: nowrap; display: inline-block; margin-bottom: 2px;}
-    .cat-tag { background: #eef2f7; color: #34495e; border-color: #cdd9e5; margin-right: 4px; } /* カテゴリ用の新しいタグデザイン */
+    .cat-tag { background: #eef2f7; color: #34495e; border-color: #cdd9e5; margin-right: 4px; }
     .date-cell { font-size: 0.65rem; color: var(--muted); }
+    .mobile-meta { display: none; margin-top: 4px; }
     .open-link { color: var(--link); text-decoration: none; font-weight: bold; padding: 5px 8px; display: inline-block; font-size: 1.1rem; }
     #results-info { text-align: center; padding: 4rem 1rem; color: var(--muted); font-size: 0.9rem; }
+
+    /* ★ プログレスバー */
+    #progress-bar-wrap {
+      width: 100%;
+      height: 4px;
+      background: var(--border);
+      border-radius: 2px;
+      margin-bottom: 1rem;
+      overflow: hidden;
+      display: none;
+    }
+    #progress-bar {
+      height: 100%;
+      background: var(--accent);
+      border-radius: 2px;
+      width: 0%;
+      transition: width 0.3s ease;
+    }
+
+    /* ★ スケルトン */
+    .skeleton-wrap { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; overflow: hidden; }
+    .skeleton-row { display: flex; gap: 12px; padding: 14px 10px; border-bottom: 1px solid var(--border); align-items: center; }
+    .skeleton-block {
+      background: linear-gradient(90deg, #e8e6e0 25%, #f5f4f0 50%, #e8e6e0 75%);
+      background-size: 200% 100%;
+      animation: shimmer 1.4s infinite;
+      border-radius: 6px;
+    }
+    @keyframes shimmer { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
+    .sk-tag  { width: 56px; height: 18px; flex-shrink: 0; }
+    .sk-title { height: 14px; flex: 1; }
+    .sk-date { width: 48px; height: 14px; flex-shrink: 0; }
+    .sk-link { width: 20px; height: 20px; flex-shrink: 0; border-radius: 50%; }
   </style>
 </head>
 <body>
 
 <header>
-  <h1>📰 News Dashboard <span class="version">v5.7</span></h1>
+  <h1>📰 News Dashboard <span class="version">v6.0</span></h1>
 </header>
 
 <main>
@@ -79,7 +133,7 @@
     <div class="card-title">検索キーワード</div>
     <div id="chips-kw" class="chips"></div>
     <div class="input-group">
-      <input type="text" id="kw-input" placeholder="追加キーワード..." />
+      <input type="text" id="kw-input" placeholder="追加キーワード..." inputmode="text" autocomplete="off" autocorrect="off" autocapitalize="none" spellcheck="false" />
       <button class="btn btn-secondary" onclick="addItem('kw')">追加</button>
     </div>
   </div>
@@ -91,7 +145,7 @@
   <div id="sc-card" class="card" style="display:none">
     <div class="card-title">個別にキーワード検索 <span>※未入力なら はてな＆noteの注目記事</span></div>
     <div class="input-group">
-      <input type="text" id="sc-input" placeholder="検索したいワード（例: 政治, ライフハック）" />
+      <input type="text" id="sc-input" placeholder="検索したいワード（例: 政治, ライフハック）" inputmode="search" autocomplete="off" autocorrect="off" autocapitalize="none" spellcheck="false" />
       <button class="btn btn-secondary" onclick="handleFetch()">検索</button>
     </div>
   </div>
@@ -100,7 +154,7 @@
     <div class="card-title">除外(NG)ワード <span>※全タブ共通で非表示にします</span></div>
     <div id="chips-ng" class="chips"></div>
     <div class="input-group">
-      <input type="text" id="ng-input" placeholder="例: 公明新聞, PR TIMES" />
+      <input type="text" id="ng-input" placeholder="例: 公明新聞, PR TIMES" inputmode="text" autocomplete="off" autocorrect="off" autocapitalize="none" spellcheck="false" />
       <button class="btn btn-secondary" onclick="addItem('ng')">追加</button>
     </div>
   </div>
@@ -118,7 +172,6 @@
         <option value="date">新しい順</option>
         <option id="sort-opt-keyword" value="keyword">キーワード順</option>
       </select>
-      
       <select id="major-cat-sel" class="sort-select" style="display:none;" onchange="renderTable()">
         <option value="all">全カテゴリ</option>
         <option value="政治">🏛 政治</option>
@@ -129,11 +182,15 @@
         <option value="その他">📌 その他</option>
       </select>
     </div>
-    
     <div style="display: flex; align-items: center; gap: 8px;">
       <div id="status-info" class="status-info">待機中</div>
       <button id="main-fetch-btn" class="btn" onclick="handleFetch()">取得</button>
     </div>
+  </div>
+
+  <!-- ★ プログレスバー -->
+  <div id="progress-bar-wrap">
+    <div id="progress-bar"></div>
   </div>
 
   <div id="results">
@@ -149,47 +206,73 @@ function safeLoadArray(key, defaultVal) {
       const parsed = JSON.parse(val);
       if (Array.isArray(parsed)) return parsed;
     }
-  } catch (e) {
-    localStorage.removeItem(key);
-  }
+  } catch (e) { localStorage.removeItem(key); }
   return defaultVal;
 }
 
-let keywords = safeLoadArray('myKeywords', ["公明党","自民党","立憲","国会","ドローン","麻生区","新百合ヶ丘"]);
-let ngWords = safeLoadArray('myNgWords', []);
+let keywords     = safeLoadArray('myKeywords', ["公明党","自民党","立憲","国会","ドローン","麻生区","新百合ヶ丘"]);
+let ngWords      = safeLoadArray('myNgWords', []);
 let visitedLinks = safeLoadArray('myVisitedLinks', []);
 
 let savedCount = localStorage.getItem('myFetchCount') || '20';
 const countSelEl = document.getElementById('count-sel');
 if (countSelEl) {
   countSelEl.value = savedCount;
-  countSelEl.addEventListener('change', (e) => {
-    localStorage.setItem('myFetchCount', e.target.value);
-  });
+  countSelEl.addEventListener('change', e => localStorage.setItem('myFetchCount', e.target.value));
 }
 
 let dataStore = { news: [], major: [], social: [] };
 let currentTab = 'news';
 
+// ★ Enter キーでキーワード/NGワード追加（常に表示されているinputのみ登録）
+document.getElementById('kw-input').addEventListener('keydown', e => { if (e.key === 'Enter') addItem('kw'); });
+document.getElementById('ng-input').addEventListener('keydown', e => { if (e.key === 'Enter') addItem('ng'); });
+// sc-input用ハンドラは名前付き関数で定義し、socialタブ切替時にのみ付け外しする
+function scInputEnterHandler(e) { if (e.key === 'Enter') handleFetch(); }
+
+// ★ プログレスバー制御
+function setProgress(pct) {
+  const wrap = document.getElementById('progress-bar-wrap');
+  const bar  = document.getElementById('progress-bar');
+  if (pct <= 0) { wrap.style.display = 'none'; bar.style.width = '0%'; return; }
+  wrap.style.display = 'block';
+  bar.style.width = Math.min(pct, 100) + '%';
+}
+
+// ★ スケルトン表示
+function showSkeleton(rows = 8) {
+  const skRows = Array.from({ length: rows }, () => `
+    <div class="skeleton-row">
+      <div class="skeleton-block sk-tag"></div>
+      <div class="skeleton-block sk-title"></div>
+      <div class="skeleton-block sk-date"></div>
+      <div class="skeleton-block sk-link"></div>
+    </div>`).join('');
+  document.getElementById('results').innerHTML = `<div class="skeleton-wrap">${skRows}</div>`;
+}
+
 function switchTab(t) {
   currentTab = t;
   document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
   document.getElementById('tab-'+t).classList.add('active');
-  document.getElementById('kw-card').style.display = (t === 'news') ? 'block' : 'none';
-  document.getElementById('ng-card').style.display = (t === 'news') ? 'block' : 'none';
-  document.getElementById('mj-card').style.display = (t === 'major') ? 'block' : 'none';
+  document.getElementById('kw-card').style.display = (t === 'news')   ? 'block' : 'none';
+  document.getElementById('ng-card').style.display = (t === 'news')   ? 'block' : 'none';
+  document.getElementById('mj-card').style.display = (t === 'major')  ? 'block' : 'none';
   document.getElementById('sc-card').style.display = (t === 'social') ? 'block' : 'none';
-  
-  const countSel = document.getElementById('count-sel');
-  if (countSel) countSel.style.display = 'inline-block';
-  
+
   const sortOptKeyword = document.getElementById('sort-opt-keyword');
   if (sortOptKeyword) sortOptKeyword.textContent = (t === 'news') ? 'キーワード順' : '出典順';
-  
-  // 【新機能】主要タブの時だけカテゴリフィルターを表示
+
   const majorCatSel = document.getElementById('major-cat-sel');
   if (majorCatSel) majorCatSel.style.display = (t === 'major') ? 'inline-block' : 'none';
-  
+
+  // sc-input の Enter ハンドラ: socialタブの時だけ有効（重複登録を避けるため一度外してから付ける）
+  const scInp = document.getElementById('sc-input');
+  if (scInp) {
+    scInp.removeEventListener('keydown', scInputEnterHandler);
+    if (t === 'social') scInp.addEventListener('keydown', scInputEnterHandler);
+  }
+
   renderTable();
 }
 
@@ -221,13 +304,13 @@ function removeItem(type, i) {
 
 function saveData() {
   localStorage.setItem('myKeywords', JSON.stringify(keywords));
-  localStorage.setItem('myNgWords', JSON.stringify(ngWords));
+  localStorage.setItem('myNgWords',  JSON.stringify(ngWords));
 }
 
 function markAsVisited(link) {
   if (!visitedLinks.includes(link)) {
     visitedLinks.push(link);
-    if (visitedLinks.length > 500) visitedLinks.shift(); 
+    if (visitedLinks.length > 500) visitedLinks.shift();
     localStorage.setItem('myVisitedLinks', JSON.stringify(visitedLinks));
     renderTable();
   }
@@ -237,7 +320,6 @@ function isImageLink(link) {
   return link.includes('/images') || link.includes('/photo') || link.includes('/pict');
 }
 
-// 【新機能】記事のタイトルから単語を読み取り、自動でカテゴリ分けする関数
 function autoCategorize(title) {
   if (/政治|首相|国会|議員|参院|衆院|自民|立憲|公明|維新|共産|国民民主|岸田|政策|法案|大臣|政府|選挙|政権|裏金|与党|野党|日銀|財務|閣僚/.test(title)) return '政治';
   if (/国際|大統領|米|アメリカ|中国|ロシア|ウクライナ|韓国|北朝鮮|台湾|イスラエル|ガザ|国連|バイデン|トランプ|プーチン|首脳|外相|海外|円相場|ドル|欧州/.test(title)) return '国際';
@@ -250,55 +332,76 @@ function autoCategorize(title) {
 async function handleFetch() {
   const btn = document.getElementById('main-fetch-btn');
   if (btn) btn.disabled = true;
-  
+
   const excludeParam = encodeURIComponent(ngWords.join(','));
-  const fetchCount = document.getElementById('count-sel').value;
-  
+  const fetchCount   = document.getElementById('count-sel').value;
+
+  // スケルトン表示 & プログレス開始
+  showSkeleton();
+  setProgress(5);
+
   try {
     if (currentTab === 'news') {
-      dataStore.news = [];
-      for (let i = 0; i < keywords.length; i++) {
-        document.getElementById('status-info').textContent = `取得中 ${i+1}/${keywords.length}`;
-        const res = await fetch(`/.netlify/functions/rss?keyword=${encodeURIComponent(keywords[i])}&type=news&exclude=${excludeParam}&count=${fetchCount}`);
-        if (!res.ok) throw new Error('通信エラー');
-        const items = await res.json();
-        dataStore.news.push(...items.map(it => ({...it, dt: new Date(it.published || 0)})));
-        await new Promise(r => setTimeout(r, 300));
-      }
-      
+      // ★ 全キーワードを並列フェッチ
+      document.getElementById('status-info').textContent = `取得中 (${keywords.length}件並列)`;
+      setProgress(20);
+
+      const fetchPromises = keywords.map(kw =>
+        fetch(`/.netlify/functions/rss?keyword=${encodeURIComponent(kw)}&type=news&exclude=${excludeParam}&count=${fetchCount}`)
+          .then(r => r.ok ? r.json() : [])
+          .then(items => items.map(it => ({ ...it, dt: new Date(it.published || 0) })))
+          .catch(() => [])
+      );
+
+      // ★ Promise.allSettled で完了したものから進捗を更新
+      const results = [];
+      let completed = 0;
+      await Promise.allSettled(
+        fetchPromises.map(p => p.then(items => {
+          results.push(...items);
+          completed++;
+          setProgress(20 + Math.round((completed / keywords.length) * 70));
+        }))
+      );
+
+      setProgress(95);
+
+      // 重複除去
       const uniqueNews = [];
       const seenTitlesMap = new Map();
-      
-      for (const item of dataStore.news) {
+      for (const item of results) {
         let norm = item.title.replace(/\s*[-|]\s*[^-|]*$/, '');
         norm = norm.replace(/[（\(［\[【][^）\)］\]】]*[）\)］\]】]/g, '');
         norm = norm.replace(/[^\p{L}\p{N}]/gu, '');
-        
         if (seenTitlesMap.has(norm)) {
-          const existingItem = seenTitlesMap.get(norm);
-          if (isImageLink(existingItem.link) && !isImageLink(item.link)) {
-            existingItem.link = item.link;
-            existingItem.title = item.title;
-          }
+          const ex = seenTitlesMap.get(norm);
+          if (isImageLink(ex.link) && !isImageLink(item.link)) { ex.link = item.link; ex.title = item.title; }
         } else {
           seenTitlesMap.set(norm, item);
           uniqueNews.push(item);
         }
       }
       dataStore.news = uniqueNews;
-      
+
     } else {
       const type = currentTab;
       const scInput = document.getElementById('sc-input');
       const kw = (type === 'social' && scInput) ? scInput.value.trim() : "";
       document.getElementById('status-info').textContent = '取得中...';
+      setProgress(40);
       const res = await fetch(`/.netlify/functions/rss?type=${type}&keyword=${encodeURIComponent(kw)}&exclude=${excludeParam}&count=${fetchCount}`);
       if (!res.ok) throw new Error('通信エラー');
-      dataStore[type] = (await res.json()).map(it => ({...it, dt: new Date(it.published || 0)}));
+      dataStore[type] = (await res.json()).map(it => ({ ...it, dt: new Date(it.published || 0) }));
+      setProgress(95);
     }
+
     document.getElementById('status-info').textContent = '完了';
+    setProgress(100);
+    setTimeout(() => setProgress(0), 600);
+
   } catch (error) {
     document.getElementById('status-info').textContent = '⚠️ 取得エラー';
+    setProgress(0);
   } finally {
     if (btn) btn.disabled = false;
     renderTable();
@@ -311,16 +414,11 @@ function renderTable() {
     document.getElementById('results').innerHTML = '<div id="results-info">取得ボタンを押してください</div>';
     return;
   }
-  
-  // 【新機能】主要タブの時は、自動でカテゴリを振り分けてから絞り込む
+
   if (currentTab === 'major') {
-    displayData.forEach(item => {
-      if (!item.category) item.category = autoCategorize(item.title);
-    });
+    displayData.forEach(item => { if (!item.category) item.category = autoCategorize(item.title); });
     const catFilter = document.getElementById('major-cat-sel').value;
-    if (catFilter !== 'all') {
-      displayData = displayData.filter(n => n.category === catFilter);
-    }
+    if (catFilter !== 'all') displayData = displayData.filter(n => n.category === catFilter);
     if (displayData.length === 0) {
       document.getElementById('results').innerHTML = `<div id="results-info">このカテゴリの記事はありません</div>`;
       return;
@@ -328,42 +426,41 @@ function renderTable() {
   }
 
   const sortSel = document.getElementById('sort-sel');
-  const sortBy = sortSel ? sortSel.value : 'date';
-  
-  const sorted = [...displayData].sort((a,b) => {
-    if (sortBy === 'date') return b.dt - a.dt;
-    return a.keyword.localeCompare(b.keyword, 'ja') || b.dt - a.dt;
-  });
-  
+  const sortBy  = sortSel ? sortSel.value : 'date';
+  const sorted  = [...displayData].sort((a, b) =>
+    sortBy === 'date' ? b.dt - a.dt : a.keyword.localeCompare(b.keyword, 'ja') || b.dt - a.dt
+  );
+
+  const now = Date.now();
   const rows = sorted.map(n => {
     const d = n.dt;
-    const dateStr = d.getFullYear() > 2000 ? `${d.getMonth()+1}/${d.getDate()} ${d.getHours()}:${(d.getMinutes()<10?'0':'')+d.getMinutes()}` : '—';
+    const hasDate = d.getFullYear() > 2000;
+    const dayStr  = hasDate ? `${d.getMonth()+1}/${d.getDate()}` : '—';
+    const timeStr = hasDate ? `${d.getHours()}:${(d.getMinutes()<10?'0':'')+d.getMinutes()}` : '';
+    const isNew     = hasDate && (now - d.getTime()) < 3 * 3600 * 1000;
     const isVisited = visitedLinks.includes(n.link);
-    
-    // 主要タブの時だけ、カテゴリ用の青っぽいタグを表示する
     const catTagHtml = (currentTab === 'major') ? `<span class="kw-tag cat-tag">${n.category}</span><br>` : '';
-    
+    const newBadge   = isNew ? '<span class="badge-new">NEW</span>' : '';
+    const safeLink   = encodeURI(n.link);
+
     return `<tr class="${isVisited ? 'visited' : ''}">
       <td class="col-source">${catTagHtml}<span class="kw-tag">${n.keyword}</span></td>
-      <td class="col-title"><div style="line-height:1.45; font-size: 0.9rem;">${n.title}</div></td>
-      <td class="col-date"><span class="date-cell">${dateStr}</span></td>
-      <td class="col-link"><a class="open-link" href="${n.link}" target="_blank" onclick="markAsVisited('${n.link}')">↗</a></td>
+      <td class="col-title"><div style="line-height:1.5; font-size: 0.9rem;">${newBadge}${n.title}</div><div class="mobile-meta">${catTagHtml}<span class="kw-tag">${n.keyword}</span></div></td>
+      <td class="col-date"><span class="date-day">${dayStr}</span>${timeStr ? `<span class="date-time">${timeStr}</span>` : ''}</td>
+      <td class="col-link"><a class="open-link" href="${safeLink}" target="_blank" rel="noopener noreferrer" onclick="markAsVisited('${n.link}')">↗</a></td>
     </tr>`;
   }).join('');
-  
+
   const sourceHeader = currentTab === 'news' ? 'キーワード' : '出典';
-  
   document.getElementById('results').innerHTML = `
     <div class="table-wrap">
       <table>
-        <thead>
-          <tr>
-            <th class="col-source">${sourceHeader}</th>
-            <th class="col-title">タイトル</th>
-            <th class="col-date">日時</th>
-            <th class="col-link">リンク</th>
-          </tr>
-        </thead>
+        <thead><tr>
+          <th class="col-source">${sourceHeader}</th>
+          <th class="col-title">タイトル</th>
+          <th class="col-date">日時</th>
+          <th class="col-link">リンク</th>
+        </tr></thead>
         <tbody>${rows}</tbody>
       </table>
     </div>`;
