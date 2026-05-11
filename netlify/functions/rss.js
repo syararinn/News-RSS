@@ -69,7 +69,7 @@ exports.handler = async function(event) {
         if (titleLower.includes('komei.or.jp') || linkLower.includes('komei.or.jp') ||
             titleLower.includes('電子版プラス') || linkLower.includes('電子版プラス') ||
             titleLower.includes('vietnam') || linkLower.includes('vietnam') ||
-            titleLower.includes('選挙ドットコム') || linkLower.includes('選挙ドットコム')) {
+            titleLower.includes('go2senkyo') || linkLower.includes('go2senkyo')) {
             continue;
         }
 
