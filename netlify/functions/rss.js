@@ -60,20 +60,25 @@ exports.handler = async function(event) {
         const title = (block.match(/<title><!\[CDATA\[(.*?)\]\]><\/title>/) || block.match(/<title>(.*?)<\/title>/))?.[1] || '';
         const link  = (block.match(/<link>(.*?)<\/link>/) || block.match(/<link \/>(.*?)<\//))?.[1] || block.match(/href="(https?[^"]+)"/)?.[1] || '';
         const pub   = (block.match(/<pubDate>(.*?)<\/pubDate>/) || block.match(/<dc:date>(.*?)<\/dc:date>/))?.[1] || '';
+        
+        const sourceName = (block.match(/<source[^>]*>(.*?)<\/source>/))?.[1] || '';
 
         if (!title || !link) continue;
 
-        // 【ここが絶対除外ルールです！】go2senkyo.com/seijika/ を追加しました
-        const titleLower = title.toLowerCase();
-        const linkLower = link.toLowerCase();
-        if (titleLower.includes('komei.or.jp') || linkLower.includes('komei.or.jp') ||
-            titleLower.includes('電子版プラス') || linkLower.includes('電子版プラス') ||
-            titleLower.includes('vietnam') || linkLower.includes('vietnam') ||
-            titleLower.includes('go2senkyo') || linkLower.includes('go2senkyo')) {
+        // タイトル、リンク、配信元メディア名をすべて小文字にして1つのテキストに合体させる
+        const checkText = (title + ' ' + link + ' ' + sourceName).toLowerCase();
+
+        // 【修正】選挙ドットコムを削除し、go2senkyo.com/seijika のみに絞りました
+        if (
+            checkText.includes('komei.or.jp') ||
+            checkText.includes('電子版プラス') ||
+            checkText.includes('vietnam') ||
+            checkText.includes('go2senkyo.com/seijika')
+        ) {
             continue;
         }
 
-        const isExcluded = excludeList.length > 0 && excludeList.some(w => title.includes(w) || link.includes(w));
+        const isExcluded = excludeList.length > 0 && excludeList.some(w => checkText.includes(w.toLowerCase()));
         if (isExcluded) continue;
 
         parsed.push({ keyword: label, title, link, published: pub });
