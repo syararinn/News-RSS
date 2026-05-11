@@ -60,16 +60,14 @@
       .sort-select { font-size: 0.85rem; padding: 10px 8px; min-height: 44px; }
       .input-group input { font-size: 1rem; padding: 12px 10px; min-height: 44px; }
       .tab-btn { font-size: 0.8rem; padding: 14px 4px; min-height: 48px; }
-      thead th { padding: 10px 6px; }
-      tbody td { padding: 12px 6px; }
-      .col-source { display: none; }
-      .open-link { font-size: 1.4rem; padding: 8px 10px; min-width: 44px; min-height: 44px; display: flex; align-items: center; justify-content: center; }
-      .date-day { font-size: 0.7rem; }
-      .date-time { font-size: 0.7rem; }
-      .kw-tag { font-size: 0.7rem; }
+      thead th { padding: 8px 4px; font-size: 0.65rem; }
+      tbody td { padding: 10px 4px; }
+      .open-link { font-size: 1.2rem; padding: 8px; min-width: 40px; min-height: 40px; display: flex; align-items: center; justify-content: center; }
+      .date-day { font-size: 0.65rem; }
+      .date-time { font-size: 0.65rem; }
+      .kw-tag { font-size: 0.65rem; display: block; }
       .badge-new { font-size: 0.65rem; }
       .tabs { padding-top: env(safe-area-inset-top, 0px); }
-      .mobile-meta { display: block; }
     }
     tr.visited { opacity: 0.45; filter: grayscale(1); }
     .badge-new { display: inline-block; font-size: 0.6rem; font-weight: 700; padding: 1px 5px; border-radius: 4px; background: #fff3cd; color: #7d5a00; border: 1px solid #ffe08a; margin-right: 5px; vertical-align: middle; }
@@ -78,37 +76,14 @@
     .kw-tag { font-size: 0.65rem; padding: 2px 6px; border-radius: 10px; background: var(--tag-bg); color: var(--tag-text); border: 1px solid var(--tag-border); white-space: nowrap; display: inline-block; margin-bottom: 2px;}
     .cat-tag { background: #eef2f7; color: #34495e; border-color: #cdd9e5; margin-right: 4px; }
     .date-cell { font-size: 0.65rem; color: var(--muted); }
-    .mobile-meta { display: none; margin-top: 4px; }
     .open-link { color: var(--link); text-decoration: none; font-weight: bold; padding: 5px 8px; display: inline-block; font-size: 1.1rem; }
     #results-info { text-align: center; padding: 4rem 1rem; color: var(--muted); font-size: 0.9rem; }
 
-    /* ★ プログレスバー */
-    #progress-bar-wrap {
-      width: 100%;
-      height: 4px;
-      background: var(--border);
-      border-radius: 2px;
-      margin-bottom: 1rem;
-      overflow: hidden;
-      display: none;
-    }
-    #progress-bar {
-      height: 100%;
-      background: var(--accent);
-      border-radius: 2px;
-      width: 0%;
-      transition: width 0.3s ease;
-    }
-
-    /* ★ スケルトン */
+    #progress-bar-wrap { width: 100%; height: 4px; background: var(--border); border-radius: 2px; margin-bottom: 1rem; overflow: hidden; display: none; }
+    #progress-bar { height: 100%; background: var(--accent); border-radius: 2px; width: 0%; transition: width 0.3s ease; }
     .skeleton-wrap { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; overflow: hidden; }
     .skeleton-row { display: flex; gap: 12px; padding: 14px 10px; border-bottom: 1px solid var(--border); align-items: center; }
-    .skeleton-block {
-      background: linear-gradient(90deg, #e8e6e0 25%, #f5f4f0 50%, #e8e6e0 75%);
-      background-size: 200% 100%;
-      animation: shimmer 1.4s infinite;
-      border-radius: 6px;
-    }
+    .skeleton-block { background: linear-gradient(90deg, #e8e6e0 25%, #f5f4f0 50%, #e8e6e0 75%); background-size: 200% 100%; animation: shimmer 1.4s infinite; border-radius: 6px; }
     @keyframes shimmer { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
     .sk-tag  { width: 56px; height: 18px; flex-shrink: 0; }
     .sk-title { height: 14px; flex: 1; }
@@ -119,7 +94,7 @@
 <body>
 
 <header>
-  <h1>📰 News Dashboard <span class="version">v6.0</span></h1>
+  <h1>📰 News Dashboard <span class="version">v6.2</span></h1>
 </header>
 
 <main>
@@ -188,7 +163,6 @@
     </div>
   </div>
 
-  <!-- ★ プログレスバー -->
   <div id="progress-bar-wrap">
     <div id="progress-bar"></div>
   </div>
@@ -224,13 +198,10 @@ if (countSelEl) {
 let dataStore = { news: [], major: [], social: [] };
 let currentTab = 'news';
 
-// ★ Enter キーでキーワード/NGワード追加（常に表示されているinputのみ登録）
 document.getElementById('kw-input').addEventListener('keydown', e => { if (e.key === 'Enter') addItem('kw'); });
 document.getElementById('ng-input').addEventListener('keydown', e => { if (e.key === 'Enter') addItem('ng'); });
-// sc-input用ハンドラは名前付き関数で定義し、socialタブ切替時にのみ付け外しする
 function scInputEnterHandler(e) { if (e.key === 'Enter') handleFetch(); }
 
-// ★ プログレスバー制御
 function setProgress(pct) {
   const wrap = document.getElementById('progress-bar-wrap');
   const bar  = document.getElementById('progress-bar');
@@ -239,7 +210,6 @@ function setProgress(pct) {
   bar.style.width = Math.min(pct, 100) + '%';
 }
 
-// ★ スケルトン表示
 function showSkeleton(rows = 8) {
   const skRows = Array.from({ length: rows }, () => `
     <div class="skeleton-row">
@@ -266,7 +236,6 @@ function switchTab(t) {
   const majorCatSel = document.getElementById('major-cat-sel');
   if (majorCatSel) majorCatSel.style.display = (t === 'major') ? 'inline-block' : 'none';
 
-  // sc-input の Enter ハンドラ: socialタブの時だけ有効（重複登録を避けるため一度外してから付ける）
   const scInp = document.getElementById('sc-input');
   if (scInp) {
     scInp.removeEventListener('keydown', scInputEnterHandler);
@@ -336,52 +305,49 @@ async function handleFetch() {
   const excludeParam = encodeURIComponent(ngWords.join(','));
   const fetchCount   = document.getElementById('count-sel').value;
 
-  // スケルトン表示 & プログレス開始
   showSkeleton();
   setProgress(5);
 
   try {
     if (currentTab === 'news') {
-      // ★ 全キーワードを並列フェッチ
-      document.getElementById('status-info').textContent = `取得中 (${keywords.length}件並列)`;
-      setProgress(20);
-
-      const fetchPromises = keywords.map(kw =>
-        fetch(`/.netlify/functions/rss?keyword=${encodeURIComponent(kw)}&type=news&exclude=${excludeParam}&count=${fetchCount}`)
-          .then(r => r.ok ? r.json() : [])
-          .then(items => items.map(it => ({ ...it, dt: new Date(it.published || 0) })))
-          .catch(() => [])
-      );
-
-      // ★ Promise.allSettled で完了したものから進捗を更新
-      const results = [];
-      let completed = 0;
-      await Promise.allSettled(
-        fetchPromises.map(p => p.then(items => {
-          results.push(...items);
-          completed++;
-          setProgress(20 + Math.round((completed / keywords.length) * 70));
-        }))
-      );
-
-      setProgress(95);
-
-      // 重複除去
+      dataStore.news = [];
       const uniqueNews = [];
       const seenTitlesMap = new Map();
-      for (const item of results) {
-        let norm = item.title.replace(/\s*[-|]\s*[^-|]*$/, '');
-        norm = norm.replace(/[（\(［\[【][^）\)］\]】]*[）\)］\]】]/g, '');
-        norm = norm.replace(/[^\p{L}\p{N}]/gu, '');
-        if (seenTitlesMap.has(norm)) {
-          const ex = seenTitlesMap.get(norm);
-          if (isImageLink(ex.link) && !isImageLink(item.link)) { ex.link = item.link; ex.title = item.title; }
-        } else {
-          seenTitlesMap.set(norm, item);
-          uniqueNews.push(item);
+
+      // 【修正】安全のため、キーワードごとに順番に取得する直列処理に戻しました
+      for (let i = 0; i < keywords.length; i++) {
+        document.getElementById('status-info').textContent = `取得中 ${i+1}/${keywords.length}`;
+        setProgress(5 + Math.round(((i) / keywords.length) * 90));
+
+        try {
+          const res = await fetch(`/.netlify/functions/rss?keyword=${encodeURIComponent(keywords[i])}&type=news&exclude=${excludeParam}&count=${fetchCount}`);
+          if (res.ok) {
+            const rawData = await res.json();
+            const items = Array.isArray(rawData) ? rawData.map(it => ({ ...it, dt: new Date(it.published || 0) })) : [];
+            
+            for (const item of items) {
+              let norm = item.title.replace(/\s*[-|]\s*[^-|]*$/, '');
+              norm = norm.replace(/[（\(［\[【][^）\)］\]】]*[）\)］\]】]/g, '');
+              norm = norm.replace(/[^\p{L}\p{N}]/gu, '');
+              if (seenTitlesMap.has(norm)) {
+                const ex = seenTitlesMap.get(norm);
+                if (isImageLink(ex.link) && !isImageLink(item.link)) { ex.link = item.link; ex.title = item.title; }
+              } else {
+                seenTitlesMap.set(norm, item);
+                uniqueNews.push(item);
+              }
+            }
+          }
+        } catch (e) {
+          console.error("Fetch skipped for:", keywords[i]);
         }
+        
+        // 0.3秒の休憩を挟んでNetlifyに弾かれるのを防ぐ
+        await new Promise(r => setTimeout(r, 300));
       }
+      
       dataStore.news = uniqueNews;
+      setProgress(95);
 
     } else {
       const type = currentTab;
@@ -391,7 +357,8 @@ async function handleFetch() {
       setProgress(40);
       const res = await fetch(`/.netlify/functions/rss?type=${type}&keyword=${encodeURIComponent(kw)}&exclude=${excludeParam}&count=${fetchCount}`);
       if (!res.ok) throw new Error('通信エラー');
-      dataStore[type] = (await res.json()).map(it => ({ ...it, dt: new Date(it.published || 0) }));
+      const rawData = await res.json();
+      dataStore[type] = Array.isArray(rawData) ? rawData.map(it => ({ ...it, dt: new Date(it.published || 0) })) : [];
       setProgress(95);
     }
 
@@ -402,6 +369,7 @@ async function handleFetch() {
   } catch (error) {
     document.getElementById('status-info').textContent = '⚠️ 取得エラー';
     setProgress(0);
+    document.getElementById('results').innerHTML = '<div id="results-info">通信が混み合っています。少し待って再取得してください。</div>';
   } finally {
     if (btn) btn.disabled = false;
     renderTable();
@@ -411,7 +379,9 @@ async function handleFetch() {
 function renderTable() {
   let displayData = dataStore[currentTab];
   if (!displayData || displayData.length === 0) {
-    document.getElementById('results').innerHTML = '<div id="results-info">取得ボタンを押してください</div>';
+    if (!document.getElementById('results-info') || document.getElementById('results-info').textContent !== '通信が混み合っています。少し待って再取得してください。') {
+       document.getElementById('results').innerHTML = '<div id="results-info">取得ボタンを押してください</div>';
+    }
     return;
   }
 
@@ -445,7 +415,7 @@ function renderTable() {
 
     return `<tr class="${isVisited ? 'visited' : ''}">
       <td class="col-source">${catTagHtml}<span class="kw-tag">${n.keyword}</span></td>
-      <td class="col-title"><div style="line-height:1.5; font-size: 0.9rem;">${newBadge}${n.title}</div><div class="mobile-meta">${catTagHtml}<span class="kw-tag">${n.keyword}</span></div></td>
+      <td class="col-title"><div style="line-height:1.5; font-size: 0.9rem;">${newBadge}${n.title}</div></td>
       <td class="col-date"><span class="date-day">${dayStr}</span>${timeStr ? `<span class="date-time">${timeStr}</span>` : ''}</td>
       <td class="col-link"><a class="open-link" href="${safeLink}" target="_blank" rel="noopener noreferrer" onclick="markAsVisited('${n.link}')">↗</a></td>
     </tr>`;
