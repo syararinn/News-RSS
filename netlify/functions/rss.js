@@ -1,6 +1,6 @@
 exports.handler = async function(event) {
   const keyword    = event.queryStringParameters?.keyword  || '';
-  const count      = parseInt(event.queryStringParameters?.count   || '10');
+  const count      = parseInt(event.queryStringParameters?.count   || '20');
   const type       = event.queryStringParameters?.type    || 'news';
   const excludeStr = event.queryStringParameters?.exclude || '';
   const excludeList = excludeStr ? excludeStr.split(',').filter(w => w) : [];
@@ -16,7 +16,7 @@ exports.handler = async function(event) {
     return link.includes('/images') || link.includes('/photo') || link.includes('/pict');
   }
 
-  async function fetchWithTimeout(url, timeoutMs = 3500) {
+  async function fetchWithTimeout(url, timeoutMs = 3800) {
     const ctrl = new AbortController();
     const timer = setTimeout(() => ctrl.abort(), timeoutMs);
     try {
@@ -30,7 +30,7 @@ exports.handler = async function(event) {
     }
   }
 
-  async function fetchAndParse(url, type, keyword) {
+  async function fetchAndParse(url, type, keyword, forcedCategory = null) {
     try {
       const res = await fetchWithTimeout(url);
       if (!res.ok) return [];
@@ -49,51 +49,46 @@ exports.handler = async function(event) {
         else if (url.includes('asahi'))    label = '朝日新聞';
         else if (url.includes('yomiuri'))  label = '読売新聞';
         else                               label = '主要';
-      } else if (type === 'social' && !keyword) {
-        label = url.includes('hatena.ne.jp') ? 'はてな注目' : 'note注目';
-      } else if (type === 'social' && keyword) {
-        label = url.includes('note') ? 'note' : 'はてな';
+      } else if (type === 'social') {
+        label = url.includes('hatena.ne.jp') ? 'はてな' : 'note';
       }
 
       while ((match = itemRegex.exec(xml)) !== null) {
         const block = match[1];
-        const title = (block.match(/<title><!\[CDATA\[(.*?)\]\]><\/title>/) || block.match(/<title>(.*?)<\/title>/))?.[1] || '';
-        const link  = (block.match(/<link>(.*?)<\/link>/) || block.match(/<link \/>(.*?)<\//))?.[1] || block.match(/href="(https?[^"]+)"/)?.[1] || '';
-        const pub   = (block.match(/<pubDate>(.*?)<\/pubDate>/) || block.match(/<dc:date>(.*?)<\/dc:date>/))?.[1] || '';
-        
-        const sourceName = (block.match(/<source[^>]*>(.*?)<\/source>/))?.[1] || '';
+        const blockLower = block.toLowerCase();
 
-        if (!title || !link) continue;
-
-        // タイトル、リンク、配信元メディア名をすべて小文字にして1つのテキストに合体させる
-        const checkText = (title + ' ' + link + ' ' + sourceName).toLowerCase();
-
-        // 【修正】選挙ドットコムを削除し、go2senkyo.com/seijika のみに絞りました
-        if (
-            checkText.includes('komei.or.jp') ||
-            checkText.includes('電子版プラス') ||
-            checkText.includes('vietnam') ||
-            checkText.includes('選挙ドットコム')
-        ) {
+        // 絶対除外ルール
+        if (blockLower.includes('komei.or.jp') || blockLower.includes('電子版プラス') ||
+            blockLower.includes('vietnam') || blockLower.includes('go2senkyo.com/seijika')) {
             continue;
         }
 
-        const isExcluded = excludeList.length > 0 && excludeList.some(w => checkText.includes(w.toLowerCase()));
+        const title = (block.match(/<title><!\[CDATA\[(.*?)\]\]><\/title>/) || block.match(/<title>(.*?)<\/title>/))?.[1] || '';
+        const link  = (block.match(/<link>(.*?)<\/link>/) || block.match(/<link \/>(.*?)<\//))?.[1] || block.match(/href="(https?[^"]+)"/)?.[1] || '';
+        const pub   = (block.match(/<pubDate>(.*?)<\/pubDate>/) || block.match(/<dc:date>(.*?)<\/dc:date>/))?.[1] || '';
+
+        if (!title || !link) continue;
+
+        const isExcluded = excludeList.length > 0 && excludeList.some(w => blockLower.includes(w.toLowerCase()));
         if (isExcluded) continue;
 
-        parsed.push({ keyword: label, title, link, published: pub });
+        parsed.push({ 
+          keyword: label, 
+          title, 
+          link, 
+          published: pub, 
+          category: forcedCategory // 特定カテゴリのRSSから取った場合はラベルを付与
+        });
       }
-
       return parsed;
-    } catch (e) {
-      return [];
-    }
+    } catch (e) { return []; }
   }
 
   try {
-    let urls = [];
+    let tasks = [];
     if (type === 'major') {
-      urls = [
+      // 1. 網羅性マストの総合RSS
+      const generalUrls = [
         'https://news.yahoo.co.jp/rss/topics/top-picks.xml',
         'https://www.nhk.or.jp/rss/news/cat0.xml',
         'https://news.google.com/rss?hl=ja&gl=JP&ceid=JP:ja',
@@ -101,64 +96,59 @@ exports.handler = async function(event) {
         'https://rss.asahi.com/rss/asahi/newsheadlines.rdf',
         'https://www.yomiuri.co.jp/rss/news/top.rdf'
       ];
+      tasks = generalUrls.map(url => fetchAndParse(url, 'major', ''));
+
+      // 2. 政治と社会の精度底上げ用RSS（追加分）
+      tasks.push(fetchAndParse('https://news.yahoo.co.jp/rss/categories/domestic.xml', 'major', '', '政治'));
+      tasks.push(fetchAndParse('https://www.nhk.or.jp/rss/news/cat1.xml', 'major', '', '社会'));
+      tasks.push(fetchAndParse('https://www.nhk.or.jp/rss/news/cat4.xml', 'major', '', '政治'));
+      tasks.push(fetchAndParse('https://www.yomiuri.co.jp/rss/news/politics.rdf', 'major', '', '政治'));
+      tasks.push(fetchAndParse('https://www.yomiuri.co.jp/rss/news/society.rdf', 'major', '', '社会'));
     } else if (type === 'social') {
-      urls = !keyword
-        ? ['https://b.hatena.ne.jp/hotentry.rss', 'https://note.com/hashtag/話題/rss', 'https://note.com/hashtag/おすすめ/rss']
+      const socialUrls = !keyword
+        ? ['https://b.hatena.ne.jp/hotentry.rss', 'https://note.com/hashtag/話題/rss']
         : [`https://note.com/hashtag/${encodeURIComponent(keyword)}/rss`, `https://b.hatena.ne.jp/search/tag?q=${encodeURIComponent(keyword)}&mode=rss`];
+      tasks = socialUrls.map(url => fetchAndParse(url, 'social', keyword));
     } else {
-      if (!keyword) return { statusCode: 200, body: JSON.stringify([]) };
-      urls = [
+      const newsUrls = [
         `https://news.google.com/rss/search?q=${encodeURIComponent(keyword)}&hl=ja&gl=JP&ceid=JP:ja`,
         `https://www.bing.com/news/search?q=${encodeURIComponent(keyword)}&format=rss`
       ];
+      tasks = newsUrls.map(url => fetchAndParse(url, 'news', keyword));
     }
 
-    const settledResults = await Promise.allSettled(
-      urls.map(url => fetchAndParse(url, type, keyword))
-    );
+    const settled = await Promise.allSettled(tasks);
+    const allItems = settled.flatMap(r => r.status === 'fulfilled' ? r.value : []);
 
-    const allItems = settledResults.flatMap(r => r.status === 'fulfilled' ? r.value : []);
-
-    const uniqueItemsMap = new Map();
-    const items = [];
-
+    const uniqueMap = new Map();
     for (const item of allItems) {
       const normTitle = normalizeTitle(item.title);
-      if (uniqueItemsMap.has(normTitle)) {
-        const existing = uniqueItemsMap.get(normTitle);
+      if (uniqueMap.has(normTitle)) {
+        const existing = uniqueMap.get(normTitle);
+        // 【重要】既存がノーマルで、新しい方がカテゴリ持ち（政治・社会）なら、カテゴリ版を優先する
+        if (!existing.category && item.category) {
+          uniqueMap.set(normTitle, item);
+        }
+        // 画像リンク回避ルールも維持
         if (isImageLink(existing.link) && !isImageLink(item.link)) {
-          existing.link  = item.link;
+          existing.link = item.link;
           existing.title = item.title;
         }
         continue;
       }
-      uniqueItemsMap.set(normTitle, item);
-      items.push(item);
+      uniqueMap.set(normTitle, item);
     }
 
-    items.sort((a, b) => {
-      const dateA = new Date(a.published || 0).getTime();
-      const dateB = new Date(b.published || 0).getTime();
-      return dateB - dateA;
-    });
-
+    const items = Array.from(uniqueMap.values());
+    items.sort((a, b) => new Date(b.published || 0) - new Date(a.published || 0));
     if (items.length > count) items.splice(count);
 
     return {
       statusCode: 200,
-      headers: {
-        'Content-Type': 'application/json',
-        'Access-Control-Allow-Origin': '*',
-        'Cache-Control': 'public, max-age=300' 
-      },
+      headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' },
       body: JSON.stringify(items)
     };
-
   } catch (e) {
-    return {
-      statusCode: 500,
-      headers: { 'Access-Control-Allow-Origin': '*' },
-      body: JSON.stringify({ error: e.message })
-    };
+    return { statusCode: 500, body: JSON.stringify({ error: e.message }) };
   }
 };
