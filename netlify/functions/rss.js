@@ -16,7 +16,6 @@ exports.handler = async function(event) {
     return link.includes('/images') || link.includes('/photo') || link.includes('/pict');
   }
 
-  // タイムアウトを安全な3.5秒に設定
   async function fetchWithTimeout(url, timeoutMs = 3500) {
     const ctrl = new AbortController();
     const timer = setTimeout(() => ctrl.abort(), timeoutMs);
@@ -64,8 +63,15 @@ exports.handler = async function(event) {
 
         if (!title || !link) continue;
 
-        if (title.includes('komei.or.jp') || link.includes('komei.or.jp') ||
-            title.includes('電子版プラス') || link.includes('電子版プラス')) continue;
+        // 【ここが絶対除外ルールです！】go2senkyo.com/seijika/ を追加しました
+        const titleLower = title.toLowerCase();
+        const linkLower = link.toLowerCase();
+        if (titleLower.includes('komei.or.jp') || linkLower.includes('komei.or.jp') ||
+            titleLower.includes('電子版プラス') || linkLower.includes('電子版プラス') ||
+            titleLower.includes('vietnam') || linkLower.includes('vietnam') ||
+            titleLower.includes('go2senkyo.com/seijika/') || linkLower.includes('go2senkyo.com/seijika/')) {
+            continue;
+        }
 
         const isExcluded = excludeList.length > 0 && excludeList.some(w => title.includes(w) || link.includes(w));
         if (isExcluded) continue;
@@ -75,7 +81,7 @@ exports.handler = async function(event) {
 
       return parsed;
     } catch (e) {
-      return []; // エラーが起きてもシステムを止めない
+      return [];
     }
   }
 
@@ -125,14 +131,12 @@ exports.handler = async function(event) {
       items.push(item);
     }
 
-    // 全ての記事を最新の日付順に並び替え
     items.sort((a, b) => {
       const dateA = new Date(a.published || 0).getTime();
       const dateB = new Date(b.published || 0).getTime();
       return dateB - dateA;
     });
 
-    // 件数を絞る
     if (items.length > count) items.splice(count);
 
     return {
