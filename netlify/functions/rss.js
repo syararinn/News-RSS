@@ -73,7 +73,7 @@ exports.handler = async function(event) {
             checkText.includes('komei.or.jp') ||
             checkText.includes('電子版プラス') ||
             checkText.includes('vietnam') ||
-            checkText.includes('go2senkyo.com/seijika')
+            checkText.includes('go2senkyo.com')
         ) {
             continue;
         }
