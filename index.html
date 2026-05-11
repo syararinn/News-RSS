@@ -71,6 +71,7 @@
     }
     tr.visited { opacity: 0.45; filter: grayscale(1); }
     .badge-new { display: inline-block; font-size: 0.6rem; font-weight: 700; padding: 1px 5px; border-radius: 4px; background: #fff3cd; color: #7d5a00; border: 1px solid #ffe08a; margin-right: 5px; vertical-align: middle; }
+    .badge-hot { display: inline-block; font-size: 0.6rem; font-weight: 700; padding: 1px 5px; border-radius: 4px; background: #ffebee; color: #c62828; border: 1px solid #ffcdd2; margin-right: 5px; vertical-align: middle; }
     .date-day  { font-size: 0.65rem; color: var(--muted); display: block; white-space: nowrap; }
     .date-time { font-size: 0.65rem; color: var(--muted); display: block; white-space: nowrap; }
     .kw-tag { font-size: 0.65rem; padding: 2px 6px; border-radius: 10px; background: var(--tag-bg); color: var(--tag-text); border: 1px solid var(--tag-border); white-space: nowrap; display: inline-block; margin-bottom: 2px;}
@@ -94,7 +95,7 @@
 <body>
 
 <header>
-  <h1>📰 News Dashboard <span class="version">v6.2</span></h1>
+  <h1>📰 News Dashboard <span class="version">v6.9</span></h1>
 </header>
 
 <main>
@@ -114,7 +115,7 @@
   </div>
 
   <div id="mj-card" class="card" style="display:none">
-    <p style="font-size:0.85rem; color:var(--muted)">Yahoo!トピックスなどから主要ニュースを取得し、6つのカテゴリに自動仕分けします。</p>
+    <p style="font-size:0.85rem; color:var(--muted)">Yahoo!トピックスなどから主要ニュースを取得し、自動仕分けします。</p>
   </div>
 
   <div id="sc-card" class="card" style="display:none">
@@ -145,11 +146,14 @@
       </select>
       <select id="sort-sel" class="sort-select" onchange="renderTable()">
         <option value="date">新しい順</option>
+        <option value="hot">🔥 話題順</option>
         <option id="sort-opt-keyword" value="keyword">キーワード順</option>
       </select>
+      
       <select id="major-cat-sel" class="sort-select" style="display:none;" onchange="renderTable()">
         <option value="all">全カテゴリ</option>
         <option value="政治">🏛 政治</option>
+        <option value="経済">💴 経済</option>
         <option value="社会">🚨 社会</option>
         <option value="国際">🌍 国際</option>
         <option value="芸能">✨ 芸能</option>
@@ -184,6 +188,7 @@ function safeLoadArray(key, defaultVal) {
   return defaultVal;
 }
 
+// 【元通り】初期値を空に戻しました。
 let keywords     = safeLoadArray('myKeywords', ["公明党","自民党","立憲","国会","ドローン","麻生区","新百合ヶ丘"]);
 let ngWords      = safeLoadArray('myNgWords', []);
 let visitedLinks = safeLoadArray('myVisitedLinks', []);
@@ -290,18 +295,74 @@ function isImageLink(link) {
 }
 
 function autoCategorize(title) {
-  if (/政治|首相|国会|議員|参院|衆院|自民|立憲|公明|維新|共産|国民民主|岸田|政策|法案|大臣|政府|選挙|政権|裏金|与党|野党|日銀|財務|閣僚/.test(title)) return '政治';
-  if (/国際|大統領|米|アメリカ|中国|ロシア|ウクライナ|韓国|北朝鮮|台湾|イスラエル|ガザ|国連|バイデン|トランプ|プーチン|首脳|外相|海外|円相場|ドル|欧州/.test(title)) return '国際';
+  if (/政治|首相|国会|議員|参院|衆院|自民|立憲|公明|維新|共産|国民民主|政策|法案|大臣|政府|選挙|政権|裏金|与党|野党|閣僚|知事|市長|町長|村長|都政|府政|道政|県政/.test(title)) return '政治';
+  if (/経済|株価|円安|円高|為替|日銀|財務|企業|決算|業績|投資|市場|ビジネス|賃上げ|物価|倒産|買収|GDP/.test(title)) return '経済';
+  if (/国際|大統領|米|アメリカ|中国|ロシア|ウクライナ|韓国|北朝鮮|台湾|イスラエル|ガザ|国連|バイデン|トランプ|プーチン|首脳|外相|海外|欧州/.test(title)) return '国際';
   if (/スポーツ|野球|サッカー|MLB|大谷|ホームラン|五輪|オリンピック|優勝|監督|選手|試合|バレー|バスケ|相撲|競馬|大会|連勝|打者|投手|ゴルフ|陸上/.test(title)) return 'スポーツ';
   if (/芸能|アイドル|映画|ドラマ|俳優|女優|タレント|ジャニーズ|SMILE-UP|乃木坂|AKB|アニメ|公開|放送|熱愛|結婚|離婚|ライブ|ツアー|アーティスト|音楽/.test(title)) return '芸能';
   if (/社会|逮捕|容疑者|事件|事故|裁判|判決|地震|震度|津波|台風|気象|警報|感染|詐欺|死亡|火災|遺体|被害|警察|警視庁|殺人|消防|調査/.test(title)) return '社会';
   return 'その他';
 }
 
+function getBigrams(str) {
+  const bg = [];
+  for(let i=0; i<str.length-1; i++) bg.push(str.slice(i, i+2));
+  return bg;
+}
+
+function calcSimilarity(s1, s2) {
+  if(!s1 || !s2) return 0;
+  if(s1 === s2) return 1;
+  const bg1 = getBigrams(s1); const bg2 = getBigrams(s2);
+  if(bg1.length===0 || bg2.length===0) return 0;
+  let match = 0;
+  const copy = [...bg2];
+  for(const b of bg1) {
+    const idx = copy.indexOf(b);
+    if(idx !== -1) { match++; copy.splice(idx, 1); }
+  }
+  return (2 * match) / (bg1.length + bg2.length);
+}
+
+function applyTopicScores(items) {
+  items.forEach((it, idx) => {
+    it.topicScore = 1;
+    it.clusterId = idx;
+    it.normForSim = it.title.replace(/[（\(［\[【][^）\)］\]】]*[）\)］\]】]/g, '').replace(/[^\p{L}\p{N}]/gu, '');
+  });
+  
+  for(let i=0; i<items.length; i++) {
+     for(let j=i+1; j<items.length; j++) {
+        if(calcSimilarity(items[i].normForSim, items[j].normForSim) > 0.35) {
+           const targetId = items[j].clusterId;
+           const newId = items[i].clusterId;
+           if(targetId !== newId) {
+             items.forEach(it => { if(it.clusterId === targetId) it.clusterId = newId; });
+           }
+        }
+     }
+  }
+  
+  const clusterStats = new Map();
+  items.forEach(it => {
+     if(!clusterStats.has(it.clusterId)) clusterStats.set(it.clusterId, { count: 0, latest: 0 });
+     const stats = clusterStats.get(it.clusterId);
+     stats.count++;
+     if(it.dt > stats.latest) stats.latest = it.dt;
+  });
+  
+  items.forEach(it => {
+     const stats = clusterStats.get(it.clusterId);
+     it.topicScore = stats.count;
+     it.clusterLatestDt = stats.latest;
+  });
+}
+
 async function handleFetch() {
   const btn = document.getElementById('main-fetch-btn');
   if (btn) btn.disabled = true;
 
+  // 【元通り】余計な小細工は消し、素直にパラメーターを送るように戻しました
   const excludeParam = encodeURIComponent(ngWords.join(','));
   const fetchCount   = document.getElementById('count-sel').value;
 
@@ -314,7 +375,6 @@ async function handleFetch() {
       const uniqueNews = [];
       const seenTitlesMap = new Map();
 
-      // 【修正】安全のため、キーワードごとに順番に取得する直列処理に戻しました
       for (let i = 0; i < keywords.length; i++) {
         document.getElementById('status-info').textContent = `取得中 ${i+1}/${keywords.length}`;
         setProgress(5 + Math.round(((i) / keywords.length) * 90));
@@ -342,10 +402,10 @@ async function handleFetch() {
           console.error("Fetch skipped for:", keywords[i]);
         }
         
-        // 0.3秒の休憩を挟んでNetlifyに弾かれるのを防ぐ
         await new Promise(r => setTimeout(r, 300));
       }
       
+      applyTopicScores(uniqueNews);
       dataStore.news = uniqueNews;
       setProgress(95);
 
@@ -358,7 +418,9 @@ async function handleFetch() {
       const res = await fetch(`/.netlify/functions/rss?type=${type}&keyword=${encodeURIComponent(kw)}&exclude=${excludeParam}&count=${fetchCount}`);
       if (!res.ok) throw new Error('通信エラー');
       const rawData = await res.json();
-      dataStore[type] = Array.isArray(rawData) ? rawData.map(it => ({ ...it, dt: new Date(it.published || 0) })) : [];
+      let items = Array.isArray(rawData) ? rawData.map(it => ({ ...it, dt: new Date(it.published || 0) })) : [];
+      applyTopicScores(items);
+      dataStore[type] = items;
       setProgress(95);
     }
 
@@ -397,12 +459,19 @@ function renderTable() {
 
   const sortSel = document.getElementById('sort-sel');
   const sortBy  = sortSel ? sortSel.value : 'date';
-  const sorted  = [...displayData].sort((a, b) =>
-    sortBy === 'date' ? b.dt - a.dt : a.keyword.localeCompare(b.keyword, 'ja') || b.dt - a.dt
-  );
+  
+  const sorted  = [...displayData].sort((a, b) => {
+    if (sortBy === 'hot') {
+      return b.topicScore - a.topicScore || b.clusterLatestDt - a.clusterLatestDt || b.clusterId - a.clusterId || b.dt - a.dt;
+    }
+    if (sortBy === 'date') return b.dt - a.dt;
+    return a.keyword.localeCompare(b.keyword, 'ja') || b.dt - a.dt;
+  });
 
   const now = Date.now();
-  const rows = sorted.map(n => {
+  let currentClusterId = null;
+
+  const rows = sorted.map((n, idx) => {
     const d = n.dt;
     const hasDate = d.getFullYear() > 2000;
     const dayStr  = hasDate ? `${d.getMonth()+1}/${d.getDate()}` : '—';
@@ -411,11 +480,18 @@ function renderTable() {
     const isVisited = visitedLinks.includes(n.link);
     const catTagHtml = (currentTab === 'major') ? `<span class="kw-tag cat-tag">${n.category}</span><br>` : '';
     const newBadge   = isNew ? '<span class="badge-new">NEW</span>' : '';
+    
+    let hotBadge = '';
+    if (sortBy === 'hot' && n.topicScore > 1) {
+       if (n.clusterId !== currentClusterId) hotBadge = `<span class="badge-hot">🔥関連${n.topicScore}件</span>`;
+       currentClusterId = n.clusterId;
+    }
+    
     const safeLink   = encodeURI(n.link);
 
     return `<tr class="${isVisited ? 'visited' : ''}">
       <td class="col-source">${catTagHtml}<span class="kw-tag">${n.keyword}</span></td>
-      <td class="col-title"><div style="line-height:1.5; font-size: 0.9rem;">${newBadge}${n.title}</div></td>
+      <td class="col-title"><div style="line-height:1.5; font-size: 0.9rem;">${newBadge}${hotBadge}${n.title}</div></td>
       <td class="col-date"><span class="date-day">${dayStr}</span>${timeStr ? `<span class="date-time">${timeStr}</span>` : ''}</td>
       <td class="col-link"><a class="open-link" href="${safeLink}" target="_blank" rel="noopener noreferrer" onclick="markAsVisited('${n.link}')">↗</a></td>
     </tr>`;
