@@ -45,12 +45,11 @@
     table { width: 100%; border-collapse: collapse; font-size: 0.85rem; }
     thead th { background: #f9f8f5; padding: 12px 10px; text-align: left; border-bottom: 1px solid var(--border); color: var(--muted); font-size: 0.7rem; text-transform: uppercase; }
     tbody td { padding: 14px 10px; border-bottom: 1px solid var(--border); vertical-align: top; }
-    .col-source { width: 1%; white-space: nowrap; padding-right: 4px !important; }
+    
     .col-title { width: 99%; }
     .col-date { width: 1%; white-space: nowrap; padding-left: 4px !important; padding-right: 4px !important; text-align: center; }
     .col-link { width: 1%; white-space: nowrap; padding-left: 4px !important; text-align: right; }
     
-    /* あなたが追加したスマホ向けレスポンシブデザイン！ */
     @media (max-width: 600px) {
       header { padding: 1rem; }
       header h1 { font-size: 1rem; }
@@ -64,25 +63,24 @@
       .tab-btn { font-size: 0.8rem; padding: 14px 4px; min-height: 48px; }
       thead th { padding: 10px 6px; font-size: 0.65rem; }
       tbody td { padding: 12px 6px; }
-      .col-source { display: none; } /* スマホでは出典列を隠す */
       .open-link { font-size: 1.4rem; padding: 8px 10px; min-width: 44px; min-height: 44px; display: flex; align-items: center; justify-content: center; }
       .date-day { font-size: 0.7rem; }
       .date-time { font-size: 0.7rem; }
       .kw-tag { font-size: 0.7rem; }
       .badge-new { font-size: 0.65rem; }
       .tabs { padding-top: env(safe-area-inset-top, 0px); }
-      .mobile-meta { display: block; } /* スマホではタイトル下にタグを表示 */
     }
     
     tr.visited { opacity: 0.45; filter: grayscale(1); }
-    .badge-new { display: inline-block; font-size: 0.6rem; font-weight: 700; padding: 1px 5px; border-radius: 4px; background: #fff3cd; color: #7d5a00; border: 1px solid #ffe08a; margin-right: 5px; vertical-align: middle; }
-    .badge-hot { display: inline-block; font-size: 0.6rem; font-weight: 700; padding: 1px 5px; border-radius: 4px; background: #ffebee; color: #c62828; border: 1px solid #ffcdd2; margin-right: 5px; vertical-align: middle; }
+    .badge-new { display: inline-block; font-size: 0.6rem; font-weight: 700; padding: 1px 5px; border-radius: 4px; background: #fff3cd; color: #7d5a00; border: 1px solid #ffe08a; margin-right: 4px; vertical-align: middle; }
+    .badge-hot { display: inline-block; font-size: 0.6rem; font-weight: 700; padding: 1px 5px; border-radius: 4px; background: #ffebee; color: #c62828; border: 1px solid #ffcdd2; margin-right: 4px; vertical-align: middle; }
     .date-day  { font-size: 0.65rem; color: var(--muted); display: block; white-space: nowrap; }
     .date-time { font-size: 0.65rem; color: var(--muted); display: block; white-space: nowrap; }
-    .kw-tag { font-size: 0.65rem; padding: 2px 6px; border-radius: 10px; background: var(--tag-bg); color: var(--tag-text); border: 1px solid var(--tag-border); white-space: nowrap; display: inline-block; margin-bottom: 2px;}
-    .cat-tag { background: #eef2f7; color: #34495e; border-color: #cdd9e5; margin-right: 4px; }
-    .date-cell { font-size: 0.65rem; color: var(--muted); }
-    .mobile-meta { display: none; margin-top: 4px; } /* PCでは隠す */
+    
+    /* タグのデザイン */
+    .kw-tag { font-size: 0.65rem; padding: 2px 6px; border-radius: 10px; background: var(--tag-bg); color: var(--tag-text); border: 1px solid var(--tag-border); white-space: nowrap; display: inline-block; margin-right: 4px; vertical-align: middle; }
+    .cat-tag { background: #eef2f7; color: #34495e; border-color: #cdd9e5; }
+    
     .open-link { color: var(--link); text-decoration: none; font-weight: bold; padding: 5px 8px; display: inline-block; font-size: 1.1rem; }
     #results-info { text-align: center; padding: 4rem 1rem; color: var(--muted); font-size: 0.9rem; }
 
@@ -101,7 +99,7 @@
 <body>
 
 <header>
-  <h1>📰 News Dashboard <span class="version">v7.2</span></h1>
+  <h1>📰 News Dashboard <span class="version">v7.3</span></h1>
 </header>
 
 <main>
@@ -223,7 +221,6 @@ function setProgress(pct) {
 function showSkeleton(rows = 8) {
   const skRows = Array.from({ length: rows }, () => `
     <div class="skeleton-row">
-      <div class="skeleton-block sk-tag"></div>
       <div class="skeleton-block sk-title"></div>
       <div class="skeleton-block sk-date"></div>
       <div class="skeleton-block sk-link"></div>
@@ -298,7 +295,6 @@ function isImageLink(link) {
   return link.includes('/images') || link.includes('/photo') || link.includes('/pict');
 }
 
-// あなたが作成した「超強力なスコア判定アルゴリズム」！
 function autoCategorize(title) {
   const scores = { '政治':0, '経済':0, '国際':0, 'スポーツ':0, '芸能':0, '社会':0 };
   const PRIORITY = { '社会':6, '国際':5, '政治':4, '経済':3, 'スポーツ':2, '芸能':1 };
@@ -347,7 +343,6 @@ function autoCategorize(title) {
   return best[0][1] === 0 ? 'その他' : best[0][0];
 }
 
-// v7.1で実装した「話題のグループ化（N-gram）」を再セット
 function getBigrams(str) {
   const bg = [];
   for(let i=0; i<str.length-1; i++) bg.push(str.slice(i, i+2));
@@ -413,7 +408,6 @@ async function handleFetch() {
       const uniqueNews = [];
       const seenTitlesMap = new Map();
 
-      // Netlifyのタイムアウト制限（10秒）を回避するため、直列取得（300msの休む間隔あり）を採用しています
       for (let i = 0; i < keywords.length; i++) {
         document.getElementById('status-info').textContent = `取得中 ${i+1}/${keywords.length}`;
         setProgress(5 + Math.round(((i) / keywords.length) * 90));
@@ -486,12 +480,11 @@ function renderTable() {
 
   if (currentTab === 'major') {
     displayData.forEach(item => { 
-      // 【完全修正】あなたが作ったスコア判定を「最優先」とし、RSS由来を「予備」とする完璧なロジック
       const autoCat = autoCategorize(item.title);
       if (autoCat !== 'その他') {
-        item.category = autoCat; // 最強のスコア判定を信じる
+        item.category = autoCat; 
       } else {
-        item.category = item.category || 'その他'; // もし「その他」だった場合のみ、政治RSSなどのラベルを採用
+        item.category = item.category || 'その他'; 
       }
     });
     
@@ -524,7 +517,6 @@ function renderTable() {
     const timeStr = hasDate ? `${d.getHours()}:${(d.getMinutes()<10?'0':'')+d.getMinutes()}` : '';
     const isNew     = hasDate && (now - d.getTime()) < 3 * 3600 * 1000;
     const isVisited = visitedLinks.includes(n.link);
-    const catTagHtml = (currentTab === 'major') ? `<span class="kw-tag cat-tag">${n.category}</span><br>` : '';
     const newBadge   = isNew ? '<span class="badge-new">NEW</span>' : '';
     
     let hotBadge = '';
@@ -532,27 +524,30 @@ function renderTable() {
        if (n.clusterId !== currentClusterId) hotBadge = `<span class="badge-hot">🔥関連${n.topicScore}件</span>`;
        currentClusterId = n.clusterId;
     }
+
+    // 【修正】ここで主要タブなら「カテゴリ」、それ以外なら「出典/キーワード」のタグを作る
+    const tagHtml = (currentTab === 'major') 
+      ? `<span class="kw-tag cat-tag">${n.category}</span>` 
+      : `<span class="kw-tag">${n.keyword}</span>`;
     
     const safeLink   = encodeURI(n.link);
 
-    // あなたが追加したスマホ用「.mobile-meta」をマージしました
+    // 【修正】タイトルのすぐ左側に、NEWバッジとタグを直接並べて表示する
     return `<tr class="${isVisited ? 'visited' : ''}">
-      <td class="col-source">${catTagHtml}<span class="kw-tag">${n.keyword}</span></td>
       <td class="col-title">
-        <div style="line-height:1.5; font-size: 0.9rem;">${newBadge}${hotBadge}${n.title}</div>
-        <div class="mobile-meta">${catTagHtml}<span class="kw-tag">${n.keyword}</span></div>
+        <div style="line-height:1.5; font-size: 0.9rem;">
+          ${newBadge}${hotBadge}${tagHtml}${n.title}
+        </div>
       </td>
       <td class="col-date"><span class="date-day">${dayStr}</span>${timeStr ? `<span class="date-time">${timeStr}</span>` : ''}</td>
       <td class="col-link"><a class="open-link" href="${safeLink}" target="_blank" rel="noopener noreferrer" onclick="markAsVisited('${n.link}')">↗</a></td>
     </tr>`;
   }).join('');
 
-  const sourceHeader = currentTab === 'news' ? 'キーワード' : '出典';
   document.getElementById('results').innerHTML = `
     <div class="table-wrap">
       <table>
         <thead><tr>
-          <th class="col-source">${sourceHeader}</th>
           <th class="col-title">タイトル</th>
           <th class="col-date">日時</th>
           <th class="col-link">リンク</th>
