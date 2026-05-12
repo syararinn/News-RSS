@@ -49,6 +49,8 @@
     .col-title { width: 99%; }
     .col-date { width: 1%; white-space: nowrap; padding-left: 4px !important; padding-right: 4px !important; text-align: center; }
     .col-link { width: 1%; white-space: nowrap; padding-left: 4px !important; text-align: right; }
+    
+    /* あなたが追加したスマホ向けレスポンシブデザイン！ */
     @media (max-width: 600px) {
       header { padding: 1rem; }
       header h1 { font-size: 1rem; }
@@ -60,15 +62,18 @@
       .sort-select { font-size: 0.85rem; padding: 10px 8px; min-height: 44px; }
       .input-group input { font-size: 1rem; padding: 12px 10px; min-height: 44px; }
       .tab-btn { font-size: 0.8rem; padding: 14px 4px; min-height: 48px; }
-      thead th { padding: 8px 4px; font-size: 0.65rem; }
-      tbody td { padding: 10px 4px; }
-      .open-link { font-size: 1.2rem; padding: 8px; min-width: 40px; min-height: 40px; display: flex; align-items: center; justify-content: center; }
-      .date-day { font-size: 0.65rem; }
-      .date-time { font-size: 0.65rem; }
-      .kw-tag { font-size: 0.65rem; display: block; }
+      thead th { padding: 10px 6px; font-size: 0.65rem; }
+      tbody td { padding: 12px 6px; }
+      .col-source { display: none; } /* スマホでは出典列を隠す */
+      .open-link { font-size: 1.4rem; padding: 8px 10px; min-width: 44px; min-height: 44px; display: flex; align-items: center; justify-content: center; }
+      .date-day { font-size: 0.7rem; }
+      .date-time { font-size: 0.7rem; }
+      .kw-tag { font-size: 0.7rem; }
       .badge-new { font-size: 0.65rem; }
       .tabs { padding-top: env(safe-area-inset-top, 0px); }
+      .mobile-meta { display: block; } /* スマホではタイトル下にタグを表示 */
     }
+    
     tr.visited { opacity: 0.45; filter: grayscale(1); }
     .badge-new { display: inline-block; font-size: 0.6rem; font-weight: 700; padding: 1px 5px; border-radius: 4px; background: #fff3cd; color: #7d5a00; border: 1px solid #ffe08a; margin-right: 5px; vertical-align: middle; }
     .badge-hot { display: inline-block; font-size: 0.6rem; font-weight: 700; padding: 1px 5px; border-radius: 4px; background: #ffebee; color: #c62828; border: 1px solid #ffcdd2; margin-right: 5px; vertical-align: middle; }
@@ -77,6 +82,7 @@
     .kw-tag { font-size: 0.65rem; padding: 2px 6px; border-radius: 10px; background: var(--tag-bg); color: var(--tag-text); border: 1px solid var(--tag-border); white-space: nowrap; display: inline-block; margin-bottom: 2px;}
     .cat-tag { background: #eef2f7; color: #34495e; border-color: #cdd9e5; margin-right: 4px; }
     .date-cell { font-size: 0.65rem; color: var(--muted); }
+    .mobile-meta { display: none; margin-top: 4px; } /* PCでは隠す */
     .open-link { color: var(--link); text-decoration: none; font-weight: bold; padding: 5px 8px; display: inline-block; font-size: 1.1rem; }
     #results-info { text-align: center; padding: 4rem 1rem; color: var(--muted); font-size: 0.9rem; }
 
@@ -95,7 +101,7 @@
 <body>
 
 <header>
-  <h1>📰 News Dashboard <span class="version">v7.1</span></h1>
+  <h1>📰 News Dashboard <span class="version">v7.2</span></h1>
 </header>
 
 <main>
@@ -245,7 +251,6 @@ function switchTab(t) {
     scInp.removeEventListener('keydown', scInputEnterHandler);
     if (t === 'social') scInp.addEventListener('keydown', scInputEnterHandler);
   }
-
   renderTable();
 }
 
@@ -293,22 +298,61 @@ function isImageLink(link) {
   return link.includes('/images') || link.includes('/photo') || link.includes('/pict');
 }
 
+// あなたが作成した「超強力なスコア判定アルゴリズム」！
 function autoCategorize(title) {
-  if (/政治|首相|国会|議員|参院|衆院|自民|立憲|公明|維新|共産|国民民主|政策|法案|大臣|政府|選挙|政権|裏金|与党|野党|閣僚|知事|市長|町長|村長|都政|府政|道政|県政/.test(title)) return '政治';
-  if (/経済|株価|円安|円高|為替|日銀|財務|企業|決算|業績|投資|市場|ビジネス|賃上げ|物価|倒産|買収|GDP/.test(title)) return '経済';
-  if (/国際|大統領|米|アメリカ|中国|ロシア|ウクライナ|韓国|北朝鮮|台湾|イスラエル|ガザ|国連|バイデン|トランプ|プーチン|首脳|外相|海外|欧州/.test(title)) return '国際';
-  if (/スポーツ|野球|サッカー|MLB|大谷|ホームラン|五輪|オリンピック|優勝|監督|選手|試合|バレー|バスケ|相撲|競馬|大会|連勝|打者|投手|ゴルフ|陸上/.test(title)) return 'スポーツ';
-  if (/芸能|アイドル|映画|ドラマ|俳優|女優|タレント|ジャニーズ|SMILE-UP|乃木坂|AKB|アニメ|公開|放送|熱愛|結婚|離婚|ライブ|ツアー|アーティスト|音楽/.test(title)) return '芸能';
-  if (/社会|逮捕|容疑者|事件|事故|裁判|判決|地震|震度|津波|台風|気象|警報|感染|詐欺|死亡|火災|遺体|被害|警察|警視庁|殺人|消防|調査/.test(title)) return '社会';
-  return 'その他';
+  const scores = { '政治':0, '経済':0, '国際':0, 'スポーツ':0, '芸能':0, '社会':0 };
+  const PRIORITY = { '社会':6, '国際':5, '政治':4, '経済':3, 'スポーツ':2, '芸能':1 };
+
+  if (/首相|総理|内閣|衆院|参院|国会|閣議|閣僚|政権|与党|野党|裏金/.test(title)) scores['政治'] += 3;
+  if (/自民|立憲|公明|維新|共産|国民民主|れいわ|参政党/.test(title)) scores['政治'] += 3;
+  if (/議員|大臣|知事|市長|町長|村長|都政|府政|道政|県政|政策|法案|選挙|政府/.test(title)) scores['政治'] += 2;
+  if (/首相|外相|外務大臣/.test(title) && /訪米|訪中|訪韓|訪欧|会談|首脳会議|外交/.test(title)) scores['政治'] += 2;
+
+  if (/株価|日経平均|ダウ|ナスダック|円安|円高|為替|ドル円|金利|日銀|財務省/.test(title)) scores['経済'] += 3;
+  if (/GDP|物価|インフレ|賃上げ|賃金|倒産|上場|決算|赤字|黒字|増収|増益/.test(title)) scores['経済'] += 3;
+  if (/経済|企業|投資|市場|ビジネス|業績|買収|M&A|補助金|関税/.test(title)) scores['経済'] += 2;
+  if (/景気|雇用|失業|求人|就職|採用|リストラ|価格|値上げ|値下げ/.test(title)) scores['経済'] += 2;
+
+  if (/ウクライナ|ロシア|ガザ|イスラエル|パレスチナ|NATO|G7|G20/.test(title)) scores['国際'] += 3;
+  if (/トランプ|バイデン|プーチン|習近平|ゼレンスキー|マクロン/.test(title)) scores['国際'] += 3;
+  if (/北朝鮮|台湾|香港|イラン|シリア|アフガン|ミャンマー|スーダン/.test(title)) scores['国際'] += 3;
+  if (/国連|外相|外交|制裁|条約|大使|外務|海外/.test(title)) scores['国際'] += 2;
+  if (/アメリカ|中国|韓国|欧州|EU|フランス|ドイツ|イギリス/.test(title)) scores['国際'] += 2;
+  if (/米国|訪米|訪中|訪韓|渡航|在外|国際/.test(title)) scores['国際'] += 1;
+
+  if (/大谷|翔平|ダルビッシュ|山本由伸|佐々木朗希/.test(title)) scores['スポーツ'] += 3;
+  if (/MLB|NFL|NBA|NHL|プレミアリーグ|五輪|オリンピック|パラリンピック|W杯|ワールドカップ/.test(title)) scores['スポーツ'] += 3;
+  if (/野球|サッカー|バスケ|バレー|ラグビー|テニス|ゴルフ|相撲|競馬|陸上|水泳|体操/.test(title)) scores['スポーツ'] += 3;
+  if (/優勝|準優勝|決勝|監督|コーチ|選手権|リーグ|トーナメント|打者|投手|本塁打|ホームラン/.test(title)) scores['スポーツ'] += 2;
+  if (/試合|対戦|勝利|敗北|引き分け|得点|連勝|連敗/.test(title)) scores['スポーツ'] += 1;
+
+  if (/乃木坂|AKB|NMB|HKT|SKE|SMILE-UP|ジャニーズ|宝塚|ハロプロ/.test(title)) scores['芸能'] += 3;
+  if (/俳優|女優|タレント|アイドル|歌手|アーティスト|ミュージシャン|声優/.test(title)) scores['芸能'] += 3;
+  if (/映画|ドラマ|アニメ|音楽|ライブ|コンサート|ツアー|舞台|公演/.test(title)) scores['芸能'] += 2;
+  if (/熱愛|交際|結婚|離婚|出産|妊娠|引退|復帰|デビュー/.test(title)) scores['芸能'] += 2;
+  if (/主演|出演|放送|公開|受賞|ヒット|チャート/.test(title)) scores['芸能'] += 1;
+
+  if (/逮捕|容疑者|起訴|送検|書類送検|不起訴|判決|有罪|無罪|実刑/.test(title)) scores['社会'] += 3;
+  if (/死亡|遺体|殺人|殺害|傷害|強盗|詐欺|横領|汚職|わいせつ/.test(title)) scores['社会'] += 3;
+  if (/地震|震度|津波|台風|洪水|土砂崩れ|噴火|警報|避難/.test(title)) scores['社会'] += 3;
+  if (/火災|爆発|事故|衝突|脱線|墜落|沈没|感染|集団感染|食中毒/.test(title)) scores['社会'] += 3;
+  if (/事件|裁判|警察|警視庁|検察|消防|救助|行方不明|捜索/.test(title)) scores['社会'] += 2;
+  if (/被害|救急|病院|遺族|目撃|容疑|取り調べ/.test(title)) scores['社会'] += 1;
+
+  if (/逮捕|容疑者|起訴|送検|判決|有罪|実刑|殺人|殺害|わいせつ/.test(title)) {
+    ['政治','経済','国際','スポーツ','芸能'].forEach(k => { if (scores['社会'] > scores[k]) scores[k] = 0; });
+  }
+
+  const best = Object.entries(scores).sort((a, b) => b[1] - a[1] || PRIORITY[b[0]] - PRIORITY[a[0]]);
+  return best[0][1] === 0 ? 'その他' : best[0][0];
 }
 
+// v7.1で実装した「話題のグループ化（N-gram）」を再セット
 function getBigrams(str) {
   const bg = [];
   for(let i=0; i<str.length-1; i++) bg.push(str.slice(i, i+2));
   return bg;
 }
-
 function calcSimilarity(s1, s2) {
   if(!s1 || !s2) return 0;
   if(s1 === s2) return 1;
@@ -322,14 +366,12 @@ function calcSimilarity(s1, s2) {
   }
   return (2 * match) / (bg1.length + bg2.length);
 }
-
 function applyTopicScores(items) {
   items.forEach((it, idx) => {
     it.topicScore = 1;
     it.clusterId = idx;
     it.normForSim = it.title.replace(/[（\(［\[【][^）\)］\]】]*[）\)］\]】]/g, '').replace(/[^\p{L}\p{N}]/gu, '');
   });
-  
   for(let i=0; i<items.length; i++) {
      for(let j=i+1; j<items.length; j++) {
         if(calcSimilarity(items[i].normForSim, items[j].normForSim) > 0.35) {
@@ -341,7 +383,6 @@ function applyTopicScores(items) {
         }
      }
   }
-  
   const clusterStats = new Map();
   items.forEach(it => {
      if(!clusterStats.has(it.clusterId)) clusterStats.set(it.clusterId, { count: 0, latest: 0 });
@@ -349,7 +390,6 @@ function applyTopicScores(items) {
      stats.count++;
      if(it.dt > stats.latest) stats.latest = it.dt;
   });
-  
   items.forEach(it => {
      const stats = clusterStats.get(it.clusterId);
      it.topicScore = stats.count;
@@ -373,6 +413,7 @@ async function handleFetch() {
       const uniqueNews = [];
       const seenTitlesMap = new Map();
 
+      // Netlifyのタイムアウト制限（10秒）を回避するため、直列取得（300msの休む間隔あり）を採用しています
       for (let i = 0; i < keywords.length; i++) {
         document.getElementById('status-info').textContent = `取得中 ${i+1}/${keywords.length}`;
         setProgress(5 + Math.round(((i) / keywords.length) * 90));
@@ -382,7 +423,6 @@ async function handleFetch() {
           if (res.ok) {
             const rawData = await res.json();
             const items = Array.isArray(rawData) ? rawData.map(it => ({ ...it, dt: new Date(it.published || 0) })) : [];
-            
             for (const item of items) {
               let norm = item.title.replace(/\s*[-|]\s*[^-|]*$/, '');
               norm = norm.replace(/[（\(［\[【][^）\)］\]】]*[）\)］\]】]/g, '');
@@ -399,7 +439,6 @@ async function handleFetch() {
         } catch (e) {
           console.error("Fetch skipped for:", keywords[i]);
         }
-        
         await new Promise(r => setTimeout(r, 300));
       }
       
@@ -447,13 +486,12 @@ function renderTable() {
 
   if (currentTab === 'major') {
     displayData.forEach(item => { 
-      // 【修正】キーワードによる自動判定を「最優先」にする
+      // 【完全修正】あなたが作ったスコア判定を「最優先」とし、RSS由来を「予備」とする完璧なロジック
       const autoCat = autoCategorize(item.title);
       if (autoCat !== 'その他') {
-        item.category = autoCat; // 明確なキーワードがあればそれを採用
+        item.category = autoCat; // 最強のスコア判定を信じる
       } else {
-        // キーワード判定が「その他」の場合のみ、RSSから届いたカテゴリがあれば使い、なければ「その他」
-        item.category = item.category || 'その他';
+        item.category = item.category || 'その他'; // もし「その他」だった場合のみ、政治RSSなどのラベルを採用
       }
     });
     
@@ -497,9 +535,13 @@ function renderTable() {
     
     const safeLink   = encodeURI(n.link);
 
+    // あなたが追加したスマホ用「.mobile-meta」をマージしました
     return `<tr class="${isVisited ? 'visited' : ''}">
       <td class="col-source">${catTagHtml}<span class="kw-tag">${n.keyword}</span></td>
-      <td class="col-title"><div style="line-height:1.5; font-size: 0.9rem;">${newBadge}${hotBadge}${n.title}</div></td>
+      <td class="col-title">
+        <div style="line-height:1.5; font-size: 0.9rem;">${newBadge}${hotBadge}${n.title}</div>
+        <div class="mobile-meta">${catTagHtml}<span class="kw-tag">${n.keyword}</span></div>
+      </td>
       <td class="col-date"><span class="date-day">${dayStr}</span>${timeStr ? `<span class="date-time">${timeStr}</span>` : ''}</td>
       <td class="col-link"><a class="open-link" href="${safeLink}" target="_blank" rel="noopener noreferrer" onclick="markAsVisited('${n.link}')">↗</a></td>
     </tr>`;
