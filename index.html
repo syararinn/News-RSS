@@ -98,7 +98,7 @@
 <body>
 
 <header>
-  <h1>📰 News Dashboard <span class="version">v7.4</span></h1>
+  <h1>📰 News Dashboard <span class="version">v7.5</span></h1>
 </header>
 
 <main>
@@ -153,6 +153,10 @@
         <option id="sort-opt-keyword" value="keyword">キーワード順</option>
       </select>
       
+      <select id="news-kw-sel" class="sort-select" onchange="renderTable()">
+        <option value="all">全キーワード</option>
+      </select>
+
       <select id="major-cat-sel" class="sort-select" style="display:none;" onchange="renderTable()">
         <option value="all">全カテゴリ</option>
         <option value="政治">🏛 政治</option>
@@ -240,6 +244,10 @@ function switchTab(t) {
   const sortOptKeyword = document.getElementById('sort-opt-keyword');
   if (sortOptKeyword) sortOptKeyword.textContent = (t === 'news') ? 'キーワード順' : '出典順';
 
+  // ★ ニュースタブ用・主要タブ用のプルダウンの表示/非表示を切り替え
+  const newsKwSel = document.getElementById('news-kw-sel');
+  if (newsKwSel) newsKwSel.style.display = (t === 'news') ? 'inline-block' : 'none';
+
   const majorCatSel = document.getElementById('major-cat-sel');
   if (majorCatSel) majorCatSel.style.display = (t === 'major') ? 'inline-block' : 'none';
 
@@ -251,11 +259,33 @@ function switchTab(t) {
   renderTable();
 }
 
+// ★ 新設：現在のキーワード配列から、プルダウンの選択肢を動的に作る関数
+function updateNewsKwSelect() {
+  const sel = document.getElementById('news-kw-sel');
+  if (!sel) return;
+  const currentVal = sel.value; // 現在選択されている項目を記憶
+  let html = '<option value="all">全キーワード</option>';
+  keywords.forEach(kw => {
+    html += `<option value="${kw}">${kw}</option>`;
+  });
+  sel.innerHTML = html;
+  
+  // キーワードを削除した際など、以前の選択がまだ存在すれば復元、なければ「全キーワード」に戻す
+  if (keywords.includes(currentVal)) {
+    sel.value = currentVal;
+  } else {
+    sel.value = 'all';
+  }
+}
+
 function renderChips() {
   document.getElementById('chips-kw').innerHTML = keywords.map((k, i) =>
     `<span class="chip">${k}<button class="chip-del" onclick="removeItem('kw',${i})">×</button></span>`).join('');
   document.getElementById('chips-ng').innerHTML = ngWords.map((k, i) =>
     `<span class="chip chip-ng">${k}<button class="chip-del" onclick="removeItem('ng',${i})">×</button></span>`).join('');
+  
+  // チップが更新された（追加/削除された）タイミングで、プルダウンも更新する
+  updateNewsKwSelect();
 }
 
 function addItem(type) {
@@ -295,10 +325,8 @@ function isImageLink(link) {
   return link.includes('/images') || link.includes('/photo') || link.includes('/pict');
 }
 
-// ★ スコア判定アルゴリズムに「天気」を追加
 function autoCategorize(title) {
   const scores = { '政治':0, '経済':0, '国際':0, 'スポーツ':0, '芸能':0, '社会':0, '天気':0 };
-  // 天気は明確なキーワードが多いので、優先度を高めに設定します
   const PRIORITY = { '天気':7, '社会':6, '国際':5, '政治':4, '経済':3, 'スポーツ':2, '芸能':1 };
 
   if (/首相|総理|内閣|衆院|参院|国会|閣議|閣僚|政権|与党|野党|裏金/.test(title)) scores['政治'] += 3;
@@ -328,21 +356,17 @@ function autoCategorize(title) {
   if (/俳優|女優|タレント|アイドル|歌手|アーティスト|ミュージシャン|声優/.test(title)) scores['芸能'] += 3;
   if (/映画|ドラマ|アニメ|音楽|ライブ|コンサート|ツアー|舞台|公演/.test(title)) scores['芸能'] += 2;
   if (/熱愛|交際|結婚|離婚|出産|妊娠|引退|復帰|デビュー/.test(title)) scores['芸能'] += 2;
-  // 誤爆の原因だった「放送」を「番組」に変更
   if (/主演|出演|番組|公開|受賞|ヒット|チャート/.test(title)) scores['芸能'] += 1;
 
-  // ★ 新設した「天気」カテゴリのキーワード
-  if (/天気|予報|警報|注意報|気温|湿度|高気圧|低気圧|気象|雷|寒気|雨雲|降水|台風|猛暑|大雨|tenki|晴天|酷暑|夏日|エルニーニョ|にわか雨/.test(title)) scores['天気'] += 3;
+  if (/天気|予報|警報|注意報|気温|湿度|高気圧|低気圧|気象|雷|寒気|雨雲|降水|台風|猛暑|大雨|tenki|晴天|酷暑|夏日|エルニーニョ|にわか雨/i.test(title)) scores['天気'] += 3;
 
   if (/逮捕|容疑者|起訴|送検|書類送検|不起訴|判決|有罪|無罪|実刑/.test(title)) scores['社会'] += 3;
   if (/死亡|遺体|殺人|殺害|傷害|強盗|詐欺|横領|汚職|わいせつ/.test(title)) scores['社会'] += 3;
-  // 天気を分離したため、社会には災害系（地震・津波・洪水など）のみを残します
   if (/地震|震度|津波|洪水|土砂崩れ|噴火|避難/.test(title)) scores['社会'] += 3;
   if (/火災|爆発|事故|衝突|脱線|墜落|沈没|感染|集団感染|食中毒/.test(title)) scores['社会'] += 3;
   if (/事件|裁判|警察|警視庁|検察|消防|救助|行方不明|捜索/.test(title)) scores['社会'] += 2;
   if (/被害|救急|病院|遺族|目撃|容疑|取り調べ/.test(title)) scores['社会'] += 1;
 
-  // 深刻な社会事件の場合は他のスコアを無効化する処理（天気もリセット対象に含めました）
   if (/逮捕|容疑者|起訴|送検|判決|有罪|実刑|殺人|殺害|わいせつ/.test(title)) {
     ['政治','経済','国際','スポーツ','芸能','天気'].forEach(k => { if (scores['社会'] > scores[k]) scores[k] = 0; });
   }
@@ -486,6 +510,20 @@ function renderTable() {
     return;
   }
 
+  // ★ ニュースタブの処理（キーワードごとの絞り込み）
+  if (currentTab === 'news') {
+    const kwFilter = document.getElementById('news-kw-sel').value;
+    if (kwFilter !== 'all') {
+      displayData = displayData.filter(n => n.keyword === kwFilter);
+    }
+    // もし絞り込んだ結果が0件ならメッセージを出す
+    if (displayData.length === 0 && document.getElementById('results-info').textContent !== '通信が混み合っています。少し待って再取得してください。') {
+      document.getElementById('results').innerHTML = `<div id="results-info">このキーワードの記事はありません</div>`;
+      return;
+    }
+  }
+
+  // ★ 主要タブの処理（カテゴリごとの絞り込み）
   if (currentTab === 'major') {
     displayData.forEach(item => { 
       const autoCat = autoCategorize(item.title);
@@ -563,6 +601,7 @@ function renderTable() {
     </div>`;
 }
 
+// 最初の起動時処理
 renderChips();
 switchTab(currentTab);
 </script>
