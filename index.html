@@ -77,7 +77,6 @@
     .date-day  { font-size: 0.65rem; color: var(--muted); display: block; white-space: nowrap; }
     .date-time { font-size: 0.65rem; color: var(--muted); display: block; white-space: nowrap; }
     
-    /* タグのデザイン */
     .kw-tag { font-size: 0.65rem; padding: 2px 6px; border-radius: 10px; background: var(--tag-bg); color: var(--tag-text); border: 1px solid var(--tag-border); white-space: nowrap; display: inline-block; margin-right: 4px; vertical-align: middle; }
     .cat-tag { background: #eef2f7; color: #34495e; border-color: #cdd9e5; }
     
@@ -99,7 +98,7 @@
 <body>
 
 <header>
-  <h1>📰 News Dashboard <span class="version">v7.3</span></h1>
+  <h1>📰 News Dashboard <span class="version">v7.4</span></h1>
 </header>
 
 <main>
@@ -159,6 +158,7 @@
         <option value="政治">🏛 政治</option>
         <option value="経済">💴 経済</option>
         <option value="社会">🚨 社会</option>
+        <option value="天気">🌤 天気</option>
         <option value="国際">🌍 国際</option>
         <option value="芸能">✨ 芸能</option>
         <option value="スポーツ">⚾ スポーツ</option>
@@ -295,9 +295,11 @@ function isImageLink(link) {
   return link.includes('/images') || link.includes('/photo') || link.includes('/pict');
 }
 
+// ★ スコア判定アルゴリズムに「天気」を追加
 function autoCategorize(title) {
-  const scores = { '政治':0, '経済':0, '国際':0, 'スポーツ':0, '芸能':0, '社会':0 };
-  const PRIORITY = { '社会':6, '国際':5, '政治':4, '経済':3, 'スポーツ':2, '芸能':1 };
+  const scores = { '政治':0, '経済':0, '国際':0, 'スポーツ':0, '芸能':0, '社会':0, '天気':0 };
+  // 天気は明確なキーワードが多いので、優先度を高めに設定します
+  const PRIORITY = { '天気':7, '社会':6, '国際':5, '政治':4, '経済':3, 'スポーツ':2, '芸能':1 };
 
   if (/首相|総理|内閣|衆院|参院|国会|閣議|閣僚|政権|与党|野党|裏金/.test(title)) scores['政治'] += 3;
   if (/自民|立憲|公明|維新|共産|国民民主|れいわ|参政党/.test(title)) scores['政治'] += 3;
@@ -326,17 +328,23 @@ function autoCategorize(title) {
   if (/俳優|女優|タレント|アイドル|歌手|アーティスト|ミュージシャン|声優/.test(title)) scores['芸能'] += 3;
   if (/映画|ドラマ|アニメ|音楽|ライブ|コンサート|ツアー|舞台|公演/.test(title)) scores['芸能'] += 2;
   if (/熱愛|交際|結婚|離婚|出産|妊娠|引退|復帰|デビュー/.test(title)) scores['芸能'] += 2;
-  if (/主演|出演|放送|公開|受賞|ヒット|チャート/.test(title)) scores['芸能'] += 1;
+  // 誤爆の原因だった「放送」を「番組」に変更
+  if (/主演|出演|番組|公開|受賞|ヒット|チャート/.test(title)) scores['芸能'] += 1;
+
+  // ★ 新設した「天気」カテゴリのキーワード
+  if (/天気|予報|警報|注意報|気温|湿度|高気圧|低気圧|気象|雷|寒気|雨雲|降水|台風|猛暑|大雨|にわか雨/.test(title)) scores['天気'] += 3;
 
   if (/逮捕|容疑者|起訴|送検|書類送検|不起訴|判決|有罪|無罪|実刑/.test(title)) scores['社会'] += 3;
   if (/死亡|遺体|殺人|殺害|傷害|強盗|詐欺|横領|汚職|わいせつ/.test(title)) scores['社会'] += 3;
-  if (/地震|震度|津波|台風|洪水|土砂崩れ|噴火|警報|避難/.test(title)) scores['社会'] += 3;
+  // 天気を分離したため、社会には災害系（地震・津波・洪水など）のみを残します
+  if (/地震|震度|津波|洪水|土砂崩れ|噴火|避難/.test(title)) scores['社会'] += 3;
   if (/火災|爆発|事故|衝突|脱線|墜落|沈没|感染|集団感染|食中毒/.test(title)) scores['社会'] += 3;
   if (/事件|裁判|警察|警視庁|検察|消防|救助|行方不明|捜索/.test(title)) scores['社会'] += 2;
   if (/被害|救急|病院|遺族|目撃|容疑|取り調べ/.test(title)) scores['社会'] += 1;
 
+  // 深刻な社会事件の場合は他のスコアを無効化する処理（天気もリセット対象に含めました）
   if (/逮捕|容疑者|起訴|送検|判決|有罪|実刑|殺人|殺害|わいせつ/.test(title)) {
-    ['政治','経済','国際','スポーツ','芸能'].forEach(k => { if (scores['社会'] > scores[k]) scores[k] = 0; });
+    ['政治','経済','国際','スポーツ','芸能','天気'].forEach(k => { if (scores['社会'] > scores[k]) scores[k] = 0; });
   }
 
   const best = Object.entries(scores).sort((a, b) => b[1] - a[1] || PRIORITY[b[0]] - PRIORITY[a[0]]);
@@ -525,14 +533,12 @@ function renderTable() {
        currentClusterId = n.clusterId;
     }
 
-    // 【修正】ここで主要タブなら「カテゴリ」、それ以外なら「出典/キーワード」のタグを作る
     const tagHtml = (currentTab === 'major') 
       ? `<span class="kw-tag cat-tag">${n.category}</span>` 
       : `<span class="kw-tag">${n.keyword}</span>`;
     
     const safeLink   = encodeURI(n.link);
 
-    // 【修正】タイトルのすぐ左側に、NEWバッジとタグを直接並べて表示する
     return `<tr class="${isVisited ? 'visited' : ''}">
       <td class="col-title">
         <div style="line-height:1.5; font-size: 0.9rem;">
