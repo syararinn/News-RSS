@@ -95,7 +95,7 @@
 <body>
 
 <header>
-  <h1>📰 News Dashboard <span class="version">v7.0</span></h1>
+  <h1>📰 News Dashboard <span class="version">v7.1</span></h1>
 </header>
 
 <main>
@@ -447,11 +447,16 @@ function renderTable() {
 
   if (currentTab === 'major') {
     displayData.forEach(item => { 
-      // 裏側（RSS）からカテゴリが届いていない場合のみ、キーワード自動判定を行う
-      if (!item.category) {
-        item.category = autoCategorize(item.title); 
+      // 【修正】キーワードによる自動判定を「最優先」にする
+      const autoCat = autoCategorize(item.title);
+      if (autoCat !== 'その他') {
+        item.category = autoCat; // 明確なキーワードがあればそれを採用
+      } else {
+        // キーワード判定が「その他」の場合のみ、RSSから届いたカテゴリがあれば使い、なければ「その他」
+        item.category = item.category || 'その他';
       }
     });
+    
     const catFilter = document.getElementById('major-cat-sel').value;
     if (catFilter !== 'all') displayData = displayData.filter(n => n.category === catFilter);
     if (displayData.length === 0) {
@@ -520,4 +525,3 @@ switchTab(currentTab);
 </script>
 </body>
 </html>
-
