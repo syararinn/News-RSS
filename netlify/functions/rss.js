@@ -46,18 +46,6 @@ const getPublishedIso = (entry) => {
   return Number.isNaN(date.getTime()) ? new Date().toISOString() : date.toISOString();
 };
 
-const getImageUrl = (entry) => {
-  const enclosure = entry.match(/<enclosure\b[^>]*url=["'](https?:\/\/[^"']+)["'][^>]*>/i);
-  if (enclosure) return decodeHtml(enclosure[1]);
-
-  const media = entry.match(/<media:(?:thumbnail|content)\b[^>]*url=["'](https?:\/\/[^"']+)["'][^>]*>/i);
-  if (media) return decodeHtml(media[1]);
-
-  const description = getTagValue(entry, ['description', 'content:encoded', 'summary']);
-  const image = description.match(/<img\b[^>]*src=["'](https?:\/\/[^"']+)["']/i);
-  return image ? decodeHtml(image[1]) : '';
-};
-
 const fetchAndParse = async (url, keyword, typeLabel, forcedCategory = '') => {
   try {
     const res = await axios.get(url, {
@@ -82,8 +70,7 @@ const fetchAndParse = async (url, keyword, typeLabel, forcedCategory = '') => {
         link,
         published: getPublishedIso(entry),
         keyword: keyword || typeLabel,
-        category: forcedCategory,
-        img: getImageUrl(entry),
+        category: forcedCategory
       };
     }).filter(Boolean);
   } catch (error) {
