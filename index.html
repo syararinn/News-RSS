@@ -27,8 +27,11 @@
     .card { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 1rem; margin-bottom: 1rem; box-shadow: 0 2px 4px rgba(0,0,0,0.02); }
     .card-title { font-size: 0.75rem; font-weight: 700; color: var(--muted); margin-bottom: 0.8rem; display: flex; justify-content: space-between; }
     .chips { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 0.8rem; }
+    
+    /* ★ PC用のスマートなチップデザイン（修正済み） */
     .chip { background: var(--tag-bg); color: var(--tag-text); border: 1px solid var(--tag-border); font-size: 0.75rem; padding: 4px 10px; border-radius: 16px; display: flex; align-items: center; }
     .chip-del { background: none; border: none; margin-left: 4px; cursor: pointer; font-weight: bold; color: var(--tag-text); padding: 0 4px; }
+    
     .chip-ng { background: #fff0f0; color: #c0392b; border-color: #f5bbb7; }
     .chip-ng .chip-del { color: #c0392b; }
     .input-group { display: flex; gap: 8px; }
@@ -55,8 +58,11 @@
       header h1 { font-size: 1rem; }
       main { padding: 0.4rem; }
       .card { padding: 0.8rem; margin-bottom: 0.6rem; }
+      
+      /* ★ スマホ用のスマートなチップデザイン（修正済み） */
       .chip { font-size: 0.8rem; padding: 4px 10px; }
       .chip-del { font-size: 1.1rem; padding: 2px 4px; min-width: auto; min-height: auto; display: flex; align-items: center; justify-content: center; }
+      
       .btn { padding: 12px 16px; font-size: 1rem; min-height: 44px; }
       .sort-select { font-size: 0.85rem; padding: 10px 8px; min-height: 44px; }
       .input-group input { font-size: 1rem; padding: 12px 10px; min-height: 44px; }
@@ -97,7 +103,7 @@
 <body>
 
 <header>
-  <h1>📰 News Dashboard <span class="version">v7.7</span></h1>
+  <h1>📰 News Dashboard <span class="version">v7.8</span></h1>
 </header>
 
 <main>
