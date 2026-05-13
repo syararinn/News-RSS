@@ -28,7 +28,6 @@
     .card-title { font-size: 0.75rem; font-weight: 700; color: var(--muted); margin-bottom: 0.8rem; display: flex; justify-content: space-between; }
     .chips { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 0.8rem; }
     
-    /* ★ PC用のスマートなチップデザイン（修正済み） */
     .chip { background: var(--tag-bg); color: var(--tag-text); border: 1px solid var(--tag-border); font-size: 0.75rem; padding: 4px 10px; border-radius: 16px; display: flex; align-items: center; }
     .chip-del { background: none; border: none; margin-left: 4px; cursor: pointer; font-weight: bold; color: var(--tag-text); padding: 0 4px; }
     
@@ -59,7 +58,6 @@
       main { padding: 0.4rem; }
       .card { padding: 0.8rem; margin-bottom: 0.6rem; }
       
-      /* ★ スマホ用のスマートなチップデザイン（修正済み） */
       .chip { font-size: 0.8rem; padding: 4px 10px; }
       .chip-del { font-size: 1.1rem; padding: 2px 4px; min-width: auto; min-height: auto; display: flex; align-items: center; justify-content: center; }
       
@@ -103,7 +101,7 @@
 <body>
 
 <header>
-  <h1>📰 News Dashboard <span class="version">v7.8</span></h1>
+  <h1>📰 News Dashboard <span class="version">v8.0</span></h1>
 </header>
 
 <main>
@@ -328,7 +326,7 @@ function autoCategorize(title) {
   const scores = { '政治':0, '経済':0, '国際':0, 'スポーツ':0, '芸能':0, '社会':0, '天気':0 };
   const PRIORITY = { '政治':7, '社会':6, '天気':5, '国際':4, '経済':3, 'スポーツ':2, '芸能':1 };
 
-  if (/首相|総理|内閣|衆院|参院|参議院|衆議院|国会|閣議|閣僚|政権|与党|野党|裏金/.test(title)) scores['政治'] += 3;
+  if (/首相|総理|内閣|衆院|参院|国会|閣議|閣僚|政権|与党|野党|裏金/.test(title)) scores['政治'] += 3;
   if (/自民|立憲|公明|維新|共産|国民民主|れいわ|参政党/.test(title)) scores['政治'] += 3;
   if (/議員|大臣|知事|市長|町長|村長|都政|府政|道政|県政|政策|法案|選挙|政府/.test(title)) scores['政治'] += 2;
   if (/首相|外相|外務大臣/.test(title) && /訪米|訪中|訪韓|訪欧|会談|首脳会議|外交/.test(title)) scores['政治'] += 2;
@@ -359,12 +357,12 @@ function autoCategorize(title) {
 
   if (/天気|予報|警報|注意報|気温|湿度|高気圧|低気圧|気象|雷|寒気|雨雲|降水|台風|猛暑|大雨|tenki|晴天|酷暑|夏日|エルニーニョ|にわか雨/i.test(title)) scores['天気'] += 3;
 
-  if (/逮捕|容疑者|起訴|送検|書類送検|不起訴|判決|有罪|無罪|死刑|再審|一審|二審|不適切|脱法|違法|監禁|不当|実刑/.test(title)) scores['社会'] += 3;
+  if (/逮捕|容疑者|起訴|送検|書類送検|不起訴|判決|有罪|無罪|実刑/.test(title)) scores['社会'] += 3;
   if (/死亡|遺体|殺人|殺害|傷害|強盗|詐欺|横領|汚職|わいせつ/.test(title)) scores['社会'] += 3;
   if (/地震|震度|津波|洪水|土砂崩れ|噴火|避難/.test(title)) scores['社会'] += 3;
   if (/火災|爆発|事故|衝突|脱線|墜落|沈没|感染|集団感染|食中毒/.test(title)) scores['社会'] += 3;
   if (/事件|裁判|警察|警視庁|検察|消防|救助|行方不明|捜索/.test(title)) scores['社会'] += 2;
-  if (/被害|救急|病院|遺族|目撃|容疑|ナフサ|取り調べ/.test(title)) scores['社会'] += 1;
+  if (/被害|救急|病院|遺族|目撃|容疑|取り調べ/.test(title)) scores['社会'] += 1;
 
   if (/逮捕|容疑者|起訴|送検|判決|有罪|実刑|殺人|殺害|わいせつ/.test(title)) {
     ['政治','経済','国際','スポーツ','芸能','天気'].forEach(k => { if (scores['社会'] > scores[k]) scores[k] = 0; });
@@ -444,7 +442,7 @@ async function handleFetch() {
         setProgress(5 + Math.round(((i) / keywords.length) * 90));
 
         try {
-          const res = await fetch(`/.netlify/functions/rss?keyword=${encodeURIComponent(keywords[i])}&type=news&exclude=${excludeParam}&count=${fetchCount}`);
+          const res = await fetch(`/api/rss?keyword=${encodeURIComponent(keywords[i])}&type=news&exclude=${excludeParam}&count=${fetchCount}`);
           if (res.ok) {
             const rawData = await res.json();
             const items = Array.isArray(rawData) ? rawData.map(it => ({ ...it, dt: new Date(it.published || 0) })) : [];
@@ -477,7 +475,7 @@ async function handleFetch() {
       const kw = (type === 'social' && scInput) ? scInput.value.trim() : "";
       document.getElementById('status-info').textContent = '取得中...';
       setProgress(40);
-      const res = await fetch(`/.netlify/functions/rss?type=${type}&keyword=${encodeURIComponent(kw)}&exclude=${excludeParam}&count=${fetchCount}`);
+      const res = await fetch(`/api/rss?type=${type}&keyword=${encodeURIComponent(kw)}&exclude=${excludeParam}&count=${fetchCount}`);
       if (!res.ok) throw new Error('通信エラー');
       const rawData = await res.json();
       let items = Array.isArray(rawData) ? rawData.map(it => ({ ...it, dt: new Date(it.published || 0) })) : [];
