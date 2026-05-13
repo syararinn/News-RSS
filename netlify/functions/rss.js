@@ -125,12 +125,15 @@ exports.handler = async (event) => {
   const systemNgWords = ['komei.or.jp', '公明新聞電子版プラス', 'PR TIMES']; // ← 除外したい言葉をここに追加
   merged = merged.filter((item) => !systemNgWords.some((ng) => item.title.includes(ng)));
 
-  const seenLinks = new Set();
+const seenLinks = new Set();
   merged = merged.filter((item) => {
     if (seenLinks.has(item.link)) return false;
     seenLinks.add(item.link);
     return true;
   });
+
+  // ★ここを追加：スマホに送る（切り捨てる）前に、全部を「最新順」に並び替える！
+  merged.sort((a, b) => new Date(b.published).getTime() - new Date(a.published).getTime());
 
   return {
     statusCode: 200,
