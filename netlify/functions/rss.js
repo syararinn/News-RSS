@@ -115,10 +115,15 @@ exports.handler = async (event) => {
   const results = await Promise.allSettled(buildTasks({ keyword, type }));
   let merged = results.flatMap((result) => (result.status === 'fulfilled' ? result.value : []));
 
+// 1. 画面（アプリ）から送られてきたNGワードの除外
   if (exclude) {
     const ngWords = exclude.split(',').map((word) => word.trim()).filter(Boolean);
     merged = merged.filter((item) => !ngWords.some((ng) => item.title.includes(ng)));
   }
+
+  // 2. 裏側で強制的に除外する固定NGワード（★ここを追加）
+  const systemNgWords = ['komei.or.jp', '公明新聞電子版プラス', 'PR TIMES']; // ← 除外したい言葉をここに追加
+  merged = merged.filter((item) => !systemNgWords.some((ng) => item.title.includes(ng)));
 
   const seenLinks = new Set();
   merged = merged.filter((item) => {
