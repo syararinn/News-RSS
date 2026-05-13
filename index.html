@@ -84,7 +84,7 @@
     .kw-tag { font-size: 0.65rem; padding: 2px 6px; border-radius: 10px; background: var(--tag-bg); color: var(--tag-text); border: 1px solid var(--tag-border); white-space: nowrap; display: inline-block; margin-right: 4px; vertical-align: middle; }
     .cat-tag { background: #eef2f7; color: #34495e; border-color: #cdd9e5; }
     
-    .open-link { color: var(--link); text-decoration: none; font-weight: bold; padding: 5px 8px; display: inline-block; font-size: 1.1rem; }
+    .open-link { color: var(--link); text-decoration: none; font-weight: bold; padding: 5px 8px; display: inline-block; font-size: 1.1rem; cursor: pointer; }
     #results-info { text-align: center; padding: 4rem 1rem; color: var(--muted); font-size: 0.9rem; }
 
     #progress-bar-wrap { width: 100%; height: 4px; background: var(--border); border-radius: 2px; margin-bottom: 1rem; overflow: hidden; display: none; }
@@ -101,7 +101,7 @@
 <body>
 
 <header>
-  <h1>📰 News Dashboard <span class="version">v8.0</span></h1>
+  <h1>📰 News Dashboard <span class="version">v8.2</span></h1>
 </header>
 
 <main>
@@ -188,6 +188,16 @@
 </main>
 
 <script>
+// ★ プロのコードから移植：安全な文字変換
+function escapeHtml(str) {
+  return String(str)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
 function safeLoadArray(key, defaultVal) {
   try {
     const val = localStorage.getItem(key);
@@ -267,7 +277,7 @@ function updateNewsKwSelect() {
   const currentVal = sel.value; 
   let html = '<option value="all">全キーワード</option>';
   keywords.forEach(kw => {
-    html += `<option value="${kw}">${kw}</option>`;
+    html += `<option value="${escapeHtml(kw)}">${escapeHtml(kw)}</option>`;
   });
   sel.innerHTML = html;
   if (keywords.includes(currentVal)) {
@@ -279,9 +289,9 @@ function updateNewsKwSelect() {
 
 function renderChips() {
   document.getElementById('chips-kw').innerHTML = keywords.map((k, i) =>
-    `<span class="chip">${k}<button class="chip-del" onclick="removeItem('kw',${i})">×</button></span>`).join('');
+    `<span class="chip">${escapeHtml(k)}<button class="chip-del" onclick="removeItem('kw',${i})">×</button></span>`).join('');
   document.getElementById('chips-ng').innerHTML = ngWords.map((k, i) =>
-    `<span class="chip chip-ng">${k}<button class="chip-del" onclick="removeItem('ng',${i})">×</button></span>`).join('');
+    `<span class="chip chip-ng">${escapeHtml(k)}<button class="chip-del" onclick="removeItem('ng',${i})">×</button></span>`).join('');
   updateNewsKwSelect();
 }
 
@@ -316,10 +326,6 @@ function markAsVisited(link) {
     localStorage.setItem('myVisitedLinks', JSON.stringify(visitedLinks));
     renderTable();
   }
-}
-
-function isImageLink(link) {
-  return link.includes('/images') || link.includes('/photo') || link.includes('/pict');
 }
 
 function autoCategorize(title) {
@@ -450,10 +456,7 @@ async function handleFetch() {
               let norm = item.title.replace(/\s*[-|]\s*[^-|]*$/, '');
               norm = norm.replace(/[（\(［\[【][^）\)］\]】]*[）\)］\]】]/g, '');
               norm = norm.replace(/[^\p{L}\p{N}]/gu, '');
-              if (seenTitlesMap.has(norm)) {
-                const ex = seenTitlesMap.get(norm);
-                if (isImageLink(ex.link) && !isImageLink(item.link)) { ex.link = item.link; ex.title = item.title; }
-              } else {
+              if (!seenTitlesMap.has(norm)) {
                 seenTitlesMap.set(norm, item);
                 uniqueNews.push(item);
               }
@@ -554,7 +557,7 @@ function renderTable() {
     const d = n.dt;
     const hasDate = d.getFullYear() > 2000;
     const dayStr  = hasDate ? `${d.getMonth()+1}/${d.getDate()}` : '—';
-    const timeStr = hasDate ? `${d.getHours()}:${(d.getMinutes()<10?'0':'')+d.getMinutes()}` : '';
+    const timeStr = hasDate ? `${d.getHours()}:${String(d.getMinutes()).padStart(2, '0')}` : '';
     const isNew     = hasDate && (now - d.getTime()) < 3 * 3600 * 1000;
     const isVisited = visitedLinks.includes(n.link);
     const newBadge   = isNew ? '<span class="badge-new">NEW</span>' : '';
@@ -566,19 +569,21 @@ function renderTable() {
     }
 
     const tagHtml = (currentTab === 'major') 
-      ? `<span class="kw-tag cat-tag">${n.category}</span>` 
-      : `<span class="kw-tag">${n.keyword}</span>`;
+      ? `<span class="kw-tag cat-tag">${escapeHtml(n.category)}</span>` 
+      : `<span class="kw-tag">${escapeHtml(n.keyword)}</span>`;
     
-    const safeLink   = encodeURI(n.link);
+    const safeLink   = escapeHtml(n.link);
+    const safeTitle  = escapeHtml(n.title);
 
-    return `<tr class="${isVisited ? 'visited' : ''}">
+    // ★ プロのコードから移植：安全なデータリンク方式を採用（クリックエラー防止）
+    return `<tr class="${isVisited ? 'visited' : ''}" data-link="${safeLink}">
       <td class="col-title">
         <div style="line-height:1.5; font-size: 0.9rem;">
-          ${newBadge}${hotBadge}${tagHtml}${n.title}
+          ${newBadge}${hotBadge}${tagHtml}${safeTitle}
         </div>
       </td>
       <td class="col-date"><span class="date-day">${dayStr}</span>${timeStr ? `<span class="date-time">${timeStr}</span>` : ''}</td>
-      <td class="col-link"><a class="open-link" href="${safeLink}" target="_blank" rel="noopener noreferrer" onclick="markAsVisited('${n.link}')">↗</a></td>
+      <td class="col-link"><a class="open-link js-open-link" href="${safeLink}" target="_blank" rel="noopener noreferrer">↗</a></td>
     </tr>`;
   }).join('');
 
@@ -593,6 +598,15 @@ function renderTable() {
         <tbody>${rows}</tbody>
       </table>
     </div>`;
+
+  // ★ プロのコードから移植：クリックイベントを安全に処理
+  document.querySelectorAll('.js-open-link').forEach(a => {
+    a.addEventListener('click', () => {
+      const raw = a.closest('tr')?.dataset.link || '';
+      const link = raw.replace(/&amp;/g,'&').replace(/&quot;/g,'"').replace(/&#39;/g,"'");
+      if (link) markAsVisited(link);
+    });
+  });
 }
 
 renderChips();
