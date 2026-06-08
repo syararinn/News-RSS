@@ -3,10 +3,38 @@ const axios = require('axios');
 const MAX_COUNT = 100;
 const PER_FEED_ITEMS = 30;
 const REQUEST_TIMEOUT_MS = 3800;
+const USER_AGENT = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36 NewsDashboard/1.0';
+
+const normalizeEncoding = (encoding = 'utf-8') => {
+  const enc = encoding.trim().toLowerCase().replace(/_/g, '-');
+  if (enc === 'shift-jis' || enc === 'windows-31j' || enc === 'cp932') return 'shift-jis';
+  if (enc === 'euc-jp') return 'euc-jp';
+  if (enc === 'utf8') return 'utf-8';
+  return enc;
+};
+
+const decodeBuffer = (buffer, contentType = '') => {
+  const head = buffer.slice(0, 512).toString('latin1');
+  const xmlEnc = head.match(/encoding=["']([^"']+)["']/i)?.[1];
+  const ctEnc = String(contentType).match(/charset=([^;\s]+)/i)?.[1];
+  const encoding = normalizeEncoding(xmlEnc || ctEnc || 'utf-8');
+  try {
+    return new TextDecoder(encoding).decode(buffer);
+  } catch {
+    return buffer.toString('utf8');
+  }
+};
+
+const decodeCodePoint = (code) => {
+  if (!Number.isFinite(code) || code < 0 || code > 0x10FFFF) return '';
+  return String.fromCodePoint(code);
+};
 
 // タイトルの特殊文字を綺麗にするお掃除プログラム
 const decodeHtml = (value = '') => String(value)
   .replace(/<!\[CDATA\[([\s\S]*?)\]\]>/g, '$1')
+  .replace(/&#x([0-9a-fA-F]+);/g, (_, hex) => decodeCodePoint(parseInt(hex, 16)))
+  .replace(/&#(\d+);/g, (_, dec) => decodeCodePoint(parseInt(dec, 10)))
   .replace(/&amp;/g, '&')
   .replace(/&lt;/g, '<')
   .replace(/&gt;/g, '>')
@@ -24,9 +52,10 @@ module.exports = async (req, res) => {
     try {
       const response = await axios.get(url, {
         timeout: REQUEST_TIMEOUT_MS,
-        headers: { 'User-Agent': 'Mozilla/5.0 NewsDashboard/1.0' }
+        responseType: 'arraybuffer',
+        headers: { 'User-Agent': USER_AGENT }
       });
-      const xml = String(response.data || '');
+      const xml = decodeBuffer(Buffer.from(response.data || []), response.headers['content-type']);
       const entries = xml.match(/<(item|entry)\b[\s\S]*?<\/\1>/gi) || [];
       return entries.slice(0, PER_FEED_ITEMS).map(entry => {
         const titleMatch = entry.match(/<title>([\s\S]*?)<\/title>/i);
