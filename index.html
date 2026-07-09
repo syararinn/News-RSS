@@ -2,7 +2,7 @@
 <html lang="ja">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>📰</text></svg>">
   <link rel="apple-touch-icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>📰</text></svg>">
   <meta name="theme-color" content="#1a5c38">
@@ -51,15 +51,31 @@
     .controls-left { display: flex; gap: 6px; flex-wrap: wrap; flex: 1; }
     .sort-select { border: 1px solid var(--border); border-radius: 8px; padding: 8px; font-size: 0.8rem; background: #fff; }
     .status-info { font-size: 0.7rem; color: var(--muted); font-weight: bold; text-align: right; white-space: nowrap; }
-    .table-wrap { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; overflow: hidden; }
-    table { width: 100%; border-collapse: collapse; font-size: 0.85rem; }
-    thead th { background: #f9f8f5; padding: 12px 10px; text-align: left; border-bottom: 1px solid var(--border); color: var(--muted); font-size: 0.7rem; text-transform: uppercase; }
-    tbody td { padding: 14px 10px; border-bottom: 1px solid var(--border); vertical-align: top; }
-    
-    .col-title { width: 99%; }
-    .col-date { width: 1%; white-space: nowrap; padding-left: 4px !important; padding-right: 4px !important; text-align: center; }
-    .col-link { width: 1%; white-space: nowrap; padding-left: 4px !important; text-align: right; }
-    
+    .results-summary { font-size: 0.75rem; color: var(--muted); margin-bottom: 0.5rem; padding: 0 2px; }
+    .list-wrap { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; overflow: hidden; }
+    .article-list { list-style: none; margin: 0; padding: 0; }
+    .article-item { border-bottom: 1px solid var(--border); }
+    .article-item:last-child { border-bottom: none; }
+    .article-link {
+      display: block; padding: 14px 12px; text-decoration: none; color: inherit;
+      min-height: 44px; -webkit-tap-highlight-color: transparent;
+    }
+    .article-link:active { background: var(--accent-light); }
+    .article-title-row { display: flex; flex-wrap: wrap; align-items: baseline; gap: 6px; line-height: 1.45; }
+    .article-title { font-size: 0.95rem; font-weight: 600; color: var(--text); word-break: break-word; }
+    .article-meta {
+      margin-top: 6px; font-size: 0.72rem; color: var(--muted);
+      display: flex; flex-wrap: wrap; align-items: center; gap: 6px; line-height: 1.3;
+    }
+    .meta-source { font-weight: 700; color: #3d5a4a; }
+    .meta-sep { opacity: 0.45; }
+    .badge-visited {
+      display: inline-block; font-size: 0.6rem; font-weight: 700; padding: 1px 5px; border-radius: 4px;
+      background: #eee; color: #666; border: 1px solid #ddd; vertical-align: middle;
+    }
+    .article-item.visited { opacity: 0.72; }
+    .article-item.visited .article-title { font-weight: 500; color: var(--muted); }
+
     @media (max-width: 600px) {
       header { padding: 1rem; }
       header h1 { font-size: 1rem; }
@@ -73,43 +89,35 @@
       .sort-select { font-size: 0.85rem; padding: 10px 8px; min-height: 44px; }
       .input-group input { font-size: 1rem; padding: 12px 10px; min-height: 44px; }
       .tab-btn { font-size: 0.8rem; padding: 14px 4px; min-height: 48px; }
-      thead th { padding: 10px 6px; font-size: 0.65rem; }
-      tbody td { padding: 12px 6px; }
-      .open-link { font-size: 1.4rem; padding: 8px 10px; min-width: 44px; min-height: 44px; display: flex; align-items: center; justify-content: center; }
-      .date-day { font-size: 0.7rem; }
-      .date-time { font-size: 0.7rem; }
+      .article-link { padding: 14px 10px; }
+      .article-title { font-size: 0.98rem; }
       .kw-tag { font-size: 0.7rem; }
       .badge-new { font-size: 0.65rem; }
       .tabs { padding-top: env(safe-area-inset-top, 0px); }
     }
     
-    tr.visited { opacity: 0.45; filter: grayscale(1); }
-    .badge-new { display: inline-block; font-size: 0.6rem; font-weight: 700; padding: 1px 5px; border-radius: 4px; background: #fff3cd; color: #7d5a00; border: 1px solid #ffe08a; margin-right: 4px; vertical-align: middle; }
-    .badge-hot { display: inline-block; font-size: 0.6rem; font-weight: 700; padding: 1px 5px; border-radius: 4px; background: #ffebee; color: #c62828; border: 1px solid #ffcdd2; margin-right: 4px; vertical-align: middle; }
-    .date-day  { font-size: 0.65rem; color: var(--muted); display: block; white-space: nowrap; }
-    .date-time { font-size: 0.65rem; color: var(--muted); display: block; white-space: nowrap; }
+    .badge-new { display: inline-block; font-size: 0.6rem; font-weight: 700; padding: 1px 5px; border-radius: 4px; background: #fff3cd; color: #7d5a00; border: 1px solid #ffe08a; vertical-align: middle; }
+    .badge-hot { display: inline-block; font-size: 0.6rem; font-weight: 700; padding: 1px 5px; border-radius: 4px; background: #ffebee; color: #c62828; border: 1px solid #ffcdd2; vertical-align: middle; }
     
-    .kw-tag { font-size: 0.65rem; padding: 2px 6px; border-radius: 10px; background: var(--tag-bg); color: var(--tag-text); border: 1px solid var(--tag-border); white-space: nowrap; display: inline-block; margin-right: 4px; vertical-align: middle; }
+    .kw-tag { font-size: 0.65rem; padding: 2px 6px; border-radius: 10px; background: var(--tag-bg); color: var(--tag-text); border: 1px solid var(--tag-border); white-space: nowrap; display: inline-block; vertical-align: middle; }
     .cat-tag { background: #eef2f7; color: #34495e; border-color: #cdd9e5; }
     
-    .open-link { color: var(--link); text-decoration: none; font-weight: bold; padding: 5px 8px; display: inline-block; font-size: 1.1rem; cursor: pointer; }
     #results-info { text-align: center; padding: 4rem 1rem; color: var(--muted); font-size: 0.9rem; }
 
     #progress-bar-wrap { width: 100%; height: 4px; background: var(--border); border-radius: 2px; margin-bottom: 1rem; overflow: hidden; display: none; }
     #progress-bar { height: 100%; background: var(--accent); border-radius: 2px; width: 0%; transition: width 0.3s ease; }
     .skeleton-wrap { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; overflow: hidden; }
-    .skeleton-row { display: flex; gap: 12px; padding: 14px 10px; border-bottom: 1px solid var(--border); align-items: center; }
+    .skeleton-row { padding: 14px 12px; border-bottom: 1px solid var(--border); }
     .skeleton-block { background: linear-gradient(90deg, #e8e6e0 25%, #f5f4f0 50%, #e8e6e0 75%); background-size: 200% 100%; animation: shimmer 1.4s infinite; border-radius: 6px; }
     @keyframes shimmer { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
-    .sk-title { height: 14px; flex: 1; }
-    .sk-date { width: 48px; height: 14px; flex-shrink: 0; }
-    .sk-link { width: 20px; height: 20px; flex-shrink: 0; border-radius: 50%; }
+    .sk-title { height: 16px; width: 88%; margin-bottom: 8px; }
+    .sk-meta { height: 10px; width: 42%; }
   </style>
 </head>
 <body>
 
 <header>
-  <h1>📰 News Dashboard <span class="version">v8.3</span></h1>
+  <h1>📰 News Dashboard <span class="version">v8.4</span></h1>
 </header>
 
 <main>
@@ -272,8 +280,7 @@ function showSkeleton(rows = 8) {
   const skRows = Array.from({ length: rows }, () => `
     <div class="skeleton-row">
       <div class="skeleton-block sk-title"></div>
-      <div class="skeleton-block sk-date"></div>
-      <div class="skeleton-block sk-link"></div>
+      <div class="skeleton-block sk-meta"></div>
     </div>`).join('');
   document.getElementById('results').innerHTML = `<div class="skeleton-wrap">${skRows}</div>`;
 }
@@ -645,6 +652,35 @@ function applyTopicScores(items) {
   });
 }
 
+function normalizeItems(rawData) {
+  return (Array.isArray(rawData) ? rawData : []).map(it => {
+    let title = it.title || '';
+    let source = it.source || '';
+    // 旧API互換: Google形式タイトルから媒体名を分離
+    if (!source || source === 'Google' || source === 'Googleニュース') {
+      const m = title.match(/^(.*?)\s+[-|–—]\s+([^-|–—]{1,40})$/);
+      if (m && m[1].trim() && m[2].trim()) {
+        title = m[1].trim();
+        source = m[2].trim();
+      }
+    }
+    if (!source) {
+      if (['Yahoo', 'NHK', '読売', 'はてな', 'note', 'Google'].includes(it.keyword)) {
+        source = it.keyword;
+      } else {
+        source = '不明';
+      }
+    }
+    return { ...it, title, source, dt: new Date(it.published || 0) };
+  });
+}
+
+function displayTitleForDedup(title) {
+  let norm = String(title).replace(/\s*[-|]\s*[^-|]*$/, '');
+  norm = norm.replace(/[（\(［\[【][^）\)］\]】]*[）\)］\]】]/g, '');
+  return norm.replace(/[^\p{L}\p{N}]/gu, '');
+}
+
 async function handleFetch(opts = {}) {
   const silent = !!opts.silent;
   const btn = document.getElementById('main-fetch-btn');
@@ -673,11 +709,9 @@ async function handleFetch(opts = {}) {
           const res = await fetch(`/api/rss?keyword=${encodeURIComponent(keywords[i])}&type=news&exclude=${excludeParam}&count=${fetchCount}`);
           if (res.ok) {
             const rawData = await res.json();
-            const items = Array.isArray(rawData) ? rawData.map(it => ({ ...it, dt: new Date(it.published || 0) })) : [];
+            const items = normalizeItems(rawData);
             for (const item of items) {
-              let norm = item.title.replace(/\s*[-|]\s*[^-|]*$/, '');
-              norm = norm.replace(/[（\(［\[【][^）\)］\]】]*[）\)］\]】]/g, '');
-              norm = norm.replace(/[^\p{L}\p{N}]/gu, '');
+              const norm = displayTitleForDedup(item.title);
               if (!seenTitlesMap.has(norm)) {
                 seenTitlesMap.set(norm, item);
                 uniqueNews.push(item);
@@ -704,7 +738,7 @@ async function handleFetch(opts = {}) {
       const res = await fetch(`/api/rss?type=${type}&keyword=${encodeURIComponent(kw)}&exclude=${excludeParam}&count=${fetchCount}`);
       if (!res.ok) throw new Error('通信エラー');
       const rawData = await res.json();
-      let items = Array.isArray(rawData) ? rawData.map(it => ({ ...it, dt: new Date(it.published || 0) })) : [];
+      let items = normalizeItems(rawData);
       applyTopicScores(items);
       dataStore[type] = items;
       if (!silent) setProgress(95);
@@ -751,15 +785,15 @@ function renderTable() {
   }
 
   if (currentTab === 'major') {
-    displayData.forEach(item => { 
+    displayData.forEach(item => {
       const autoCat = autoCategorize(item.title);
       if (autoCat !== 'その他') {
-        item.category = autoCat; 
+        item.category = autoCat;
       } else {
-        item.category = item.category || 'その他'; 
+        item.category = item.category || 'その他';
       }
     });
-    
+
     const catFilter = document.getElementById('major-cat-sel').value;
     if (catFilter !== 'all') displayData = displayData.filter(n => n.category === catFilter);
     if (displayData.length === 0) {
@@ -770,68 +804,79 @@ function renderTable() {
 
   const sortSel = document.getElementById('sort-sel');
   const sortBy  = sortSel ? sortSel.value : 'date';
-  
+
   const sorted  = [...displayData].sort((a, b) => {
     if (sortBy === 'hot') {
       return b.topicScore - a.topicScore || b.clusterLatestDt - a.clusterLatestDt || b.clusterId - a.clusterId || b.dt - a.dt;
     }
     if (sortBy === 'date') return b.dt - a.dt;
-    return a.keyword.localeCompare(b.keyword, 'ja') || b.dt - a.dt;
+    // キーワード順 / 出典順
+    const keyA = (currentTab === 'news') ? a.keyword : (a.source || a.keyword || '');
+    const keyB = (currentTab === 'news') ? b.keyword : (b.source || b.keyword || '');
+    return keyA.localeCompare(keyB, 'ja') || b.dt - a.dt;
   });
 
   const now = Date.now();
   let currentClusterId = null;
+  const unreadCount = sorted.filter(n => !visitedLinks.includes(n.link)).length;
 
-  const rows = sorted.map((n, idx) => {
+  const rows = sorted.map((n) => {
     const d = n.dt;
     const hasDate = d.getFullYear() > 2000;
     const dayStr  = hasDate ? `${d.getMonth()+1}/${d.getDate()}` : '—';
     const timeStr = hasDate ? `${d.getHours()}:${String(d.getMinutes()).padStart(2, '0')}` : '';
+    const dateLabel = hasDate ? `${dayStr} ${timeStr}` : '—';
     const isNew     = hasDate && (now - d.getTime()) < 3 * 3600 * 1000;
     const isVisited = visitedLinks.includes(n.link);
     const newBadge   = isNew ? '<span class="badge-new">NEW</span>' : '';
-    
+    const visitedBadge = isVisited ? '<span class="badge-visited">既読</span>' : '';
+
     let hotBadge = '';
     if (sortBy === 'hot' && n.topicScore > 1) {
-       if (n.clusterId !== currentClusterId) hotBadge = `<span class="badge-hot">🔥関連${n.topicScore}件</span>`;
+       if (n.clusterId !== currentClusterId) hotBadge = `<span class="badge-hot">関連${n.topicScore}件</span>`;
        currentClusterId = n.clusterId;
     }
 
-    const tagHtml = (currentTab === 'major') 
-      ? `<span class="kw-tag cat-tag">${escapeHtml(n.category)}</span>` 
-      : `<span class="kw-tag">${escapeHtml(n.keyword)}</span>`;
-    
+    const tagHtml = (currentTab === 'major')
+      ? `<span class="kw-tag cat-tag">${escapeHtml(n.category || 'その他')}</span>`
+      : `<span class="kw-tag">${escapeHtml(n.keyword || '')}</span>`;
+
+    const sourceLabel = n.source || '不明';
     const safeLink   = escapeHtml(n.link);
     const safeTitle  = escapeHtml(n.title);
+    const safeSource = escapeHtml(sourceLabel);
 
-    // ★ プロのコードから移植：安全なデータリンク方式を採用（クリックエラー防止）
-    return `<tr class="${isVisited ? 'visited' : ''}" data-link="${safeLink}">
-      <td class="col-title">
-        <div style="line-height:1.5; font-size: 0.9rem;">
-          ${newBadge}${hotBadge}${tagHtml}${safeTitle}
+    const metaParts = [
+      `<span class="meta-source">${safeSource}</span>`,
+      `<span class="meta-sep">·</span>`,
+      `<span>${escapeHtml(dateLabel)}</span>`
+    ];
+    if (hotBadge) {
+      metaParts.push(`<span class="meta-sep">·</span>`, hotBadge);
+    }
+
+    return `<li class="article-item${isVisited ? ' visited' : ''}">
+      <a class="article-link js-open-link" href="${safeLink}" target="_blank" rel="noopener noreferrer" data-link="${safeLink}">
+        <div class="article-title-row">
+          ${newBadge}${visitedBadge}${tagHtml}
+          <span class="article-title">${safeTitle}</span>
         </div>
-      </td>
-      <td class="col-date"><span class="date-day">${dayStr}</span>${timeStr ? `<span class="date-time">${timeStr}</span>` : ''}</td>
-      <td class="col-link"><a class="open-link js-open-link" href="${safeLink}" target="_blank" rel="noopener noreferrer">↗</a></td>
-    </tr>`;
+        <div class="article-meta">${metaParts.join('')}</div>
+      </a>
+    </li>`;
   }).join('');
 
+  const summary = `<div class="results-summary">${sorted.length}件 · 未読${unreadCount}${formatLastFetch() ? ' · ' + formatLastFetch() : ''}</div>`;
+
   document.getElementById('results').innerHTML = `
-    <div class="table-wrap">
-      <table>
-        <thead><tr>
-          <th class="col-title">タイトル</th>
-          <th class="col-date">日時</th>
-          <th class="col-link">リンク</th>
-        </tr></thead>
-        <tbody>${rows}</tbody>
-      </table>
+    ${summary}
+    <div class="list-wrap">
+      <ul class="article-list">${rows}</ul>
     </div>`;
 
-  // ★ プロのコードから移植：クリックイベントを安全に処理
   document.querySelectorAll('.js-open-link').forEach(a => {
     a.addEventListener('click', () => {
-      const raw = a.closest('tr')?.dataset.link || '';
+      const raw = a.dataset.link || '';
       const link = raw.replace(/&amp;/g,'&').replace(/&quot;/g,'"').replace(/&#39;/g,"'");
       if (link) markAsVisited(link);
     });
