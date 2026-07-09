@@ -16,12 +16,12 @@
       --tag-bg: #eef7f2; --tag-border: #b5d9c5; --tag-text: #1a5c38; --link: #1a5c38;
     }
     * { box-sizing: border-box; margin: 0; padding: 0; }
-    body { font-family: -apple-system, BlinkMacSystemFont, sans-serif; background: var(--bg); color: var(--text); padding-bottom: max(4rem, env(safe-area-inset-bottom)); -webkit-tap-highlight-color: transparent; }
+    body { font-family: -apple-system, BlinkMacSystemFont, sans-serif; background: var(--bg); color: var(--text); padding-bottom: calc(4.5rem + env(safe-area-inset-bottom, 0px)); -webkit-tap-highlight-color: transparent; }
     header { background: var(--accent); color: #fff; padding: 1.5rem 1rem; text-align: center; }
     header h1 { font-size: 1.2rem; display: flex; align-items: center; justify-content: center; gap: 6px; }
     header h1 .version { font-size: 0.6rem; background: rgba(255,255,255,0.2); padding: 2px 6px; border-radius: 10px; font-weight: normal; }
     main { max-width: 900px; margin: 0 auto; padding: 1rem; }
-    .tabs { display: flex; gap: 4px; margin-bottom: 1rem; border-bottom: 2px solid var(--border); position: sticky; top: 0; background: var(--bg); z-index: 100; }
+    .tabs { display: flex; gap: 4px; margin-bottom: 0.6rem; border-bottom: 2px solid var(--border); position: sticky; top: 0; background: var(--bg); z-index: 100; }
     .tab-btn { background: none; border: none; font-size: 0.9rem; font-weight: 600; color: var(--muted); padding: 12px 5px; flex: 1; cursor: pointer; }
     .tab-btn.active { color: var(--accent); border-bottom: 3px solid var(--accent); background: var(--accent-light); }
     .card { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 1rem; margin-bottom: 1rem; box-shadow: 0 2px 4px rgba(0,0,0,0.02); }
@@ -46,11 +46,57 @@
     .input-group input:focus { border-color: var(--accent); }
     .btn { background: var(--accent); color: #fff; border: none; border-radius: 8px; padding: 10px 15px; font-size: 0.9rem; cursor: pointer; font-weight: 600; }
     .btn-secondary { background: #6b6b66; }
+    .btn-ghost {
+      background: var(--surface); color: var(--text); border: 1px solid var(--border);
+      border-radius: 8px; padding: 8px 12px; font-size: 0.8rem; cursor: pointer; font-weight: 600;
+    }
+    .btn-ghost.active { border-color: var(--accent); color: var(--accent); background: var(--accent-light); }
     .btn:disabled { opacity: 0.5; cursor: not-allowed; }
-    .controls { display: flex; align-items: center; justify-content: space-between; margin-bottom: 1rem; gap: 10px; }
-    .controls-left { display: flex; gap: 6px; flex-wrap: wrap; flex: 1; }
+
+    .action-bar { display: flex; align-items: center; gap: 8px; margin-bottom: 0.6rem; flex-wrap: wrap; }
+    .action-bar .spacer { flex: 1; min-width: 4px; }
+    .status-bar {
+      display: flex; align-items: center; justify-content: space-between; gap: 8px;
+      margin-bottom: 0.6rem; padding: 8px 10px; background: var(--surface);
+      border: 1px solid var(--border); border-radius: 10px; font-size: 0.75rem; color: var(--muted);
+    }
+    .status-bar strong { color: var(--text); font-weight: 700; }
+    .status-info { font-size: 0.75rem; color: var(--muted); font-weight: 700; white-space: nowrap; }
+    .filter-summary { font-size: 0.72rem; color: var(--muted); }
+
+    .settings-panel { display: none; margin-bottom: 0.8rem; }
+    .settings-panel.open { display: block; }
+    .settings-section { margin-bottom: 1rem; }
+    .settings-section:last-child { margin-bottom: 0; }
+    .tab-panel { display: none; margin-bottom: 0.8rem; }
+    .tab-panel.active { display: block; }
+
     .sort-select { border: 1px solid var(--border); border-radius: 8px; padding: 8px; font-size: 0.8rem; background: #fff; }
-    .status-info { font-size: 0.7rem; color: var(--muted); font-weight: bold; text-align: right; white-space: nowrap; }
+    .filter-field { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+    .filter-field label { font-size: 0.68rem; font-weight: 700; color: var(--muted); }
+    .filter-fields { display: flex; flex-wrap: wrap; gap: 8px; align-items: flex-end; }
+
+    .sheet-backdrop {
+      display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.35); z-index: 200;
+    }
+    .sheet-backdrop.open { display: block; }
+    #filter-sheet {
+      background: var(--surface); border: 1px solid var(--border); border-radius: 12px;
+      padding: 12px; margin-bottom: 0.8rem;
+    }
+    .sheet-header { display: none; }
+    .sheet-actions { display: none; margin-top: 12px; }
+
+    .fetch-bar {
+      position: fixed; left: 0; right: 0; bottom: 0; z-index: 150;
+      background: rgba(245, 244, 240, 0.96); border-top: 1px solid var(--border);
+      padding: 10px 12px calc(10px + env(safe-area-inset-bottom, 0px));
+      backdrop-filter: blur(8px);
+    }
+    .fetch-bar-inner { max-width: 900px; margin: 0 auto; display: flex; gap: 10px; align-items: center; }
+    .fetch-bar .btn { flex: 1; min-height: 48px; font-size: 1rem; }
+    .fetch-bar-status { font-size: 0.7rem; color: var(--muted); font-weight: 700; min-width: 4.5rem; text-align: right; }
+
     .results-summary { font-size: 0.75rem; color: var(--muted); margin-bottom: 0.5rem; padding: 0 2px; }
     .list-wrap { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; overflow: hidden; }
     .article-list { list-style: none; margin: 0; padding: 0; }
@@ -86,7 +132,8 @@
       .chip-del { font-size: 1.1rem; padding: 2px 4px; min-width: auto; min-height: auto; display: flex; align-items: center; justify-content: center; }
       
       .btn { padding: 12px 16px; font-size: 1rem; min-height: 44px; }
-      .sort-select { font-size: 0.85rem; padding: 10px 8px; min-height: 44px; }
+      .btn-ghost { min-height: 44px; font-size: 0.85rem; }
+      .sort-select { font-size: 0.85rem; padding: 10px 8px; min-height: 44px; width: 100%; }
       .input-group input { font-size: 1rem; padding: 12px 10px; min-height: 44px; }
       .tab-btn { font-size: 0.8rem; padding: 14px 4px; min-height: 48px; }
       .article-link { padding: 14px 10px; }
@@ -94,6 +141,37 @@
       .kw-tag { font-size: 0.7rem; }
       .badge-new { font-size: 0.65rem; }
       .tabs { padding-top: env(safe-area-inset-top, 0px); }
+
+      /* モバイル: 絞り込みは下からシート */
+      #filter-sheet {
+        display: none; position: fixed; left: 0; right: 0; bottom: 0; z-index: 220;
+        margin: 0; border-radius: 16px 16px 0 0; border: none; border-top: 1px solid var(--border);
+        padding: 16px 16px calc(16px + env(safe-area-inset-bottom, 0px));
+        max-height: 78vh; overflow: auto;
+        box-shadow: 0 -8px 24px rgba(0,0,0,0.12);
+      }
+      #filter-sheet.open { display: block; }
+      .sheet-header {
+        display: flex; align-items: center; justify-content: space-between;
+        margin-bottom: 12px; font-weight: 700; font-size: 0.95rem;
+      }
+      .sheet-actions { display: flex; gap: 8px; }
+      .sheet-actions .btn { flex: 1; }
+      .filter-fields { flex-direction: column; }
+      .filter-fields .filter-field { width: 100%; }
+      .desktop-only-filters { display: none !important; }
+    }
+
+    @media (min-width: 601px) {
+      .mobile-only { display: none !important; }
+      .fetch-bar { display: none; }
+      body { padding-bottom: 2rem; }
+      #filter-sheet { display: block !important; background: transparent; border: none; padding: 0; margin-bottom: 0.8rem; }
+      .sheet-backdrop { display: none !important; }
+      #desktop-fetch-btn { display: inline-block; }
+    }
+    @media (max-width: 600px) {
+      #desktop-fetch-btn { display: none !important; }
     }
     
     .badge-new { display: inline-block; font-size: 0.6rem; font-weight: 700; padding: 1px 5px; border-radius: 4px; background: #fff3cd; color: #7d5a00; border: 1px solid #ffe08a; vertical-align: middle; }
@@ -117,7 +195,7 @@
 <body>
 
 <header>
-  <h1>📰 News Dashboard <span class="version">v8.4</span></h1>
+  <h1>📰 News Dashboard <span class="version">v8.5</span></h1>
 </header>
 
 <main>
@@ -127,85 +205,124 @@
     <button id="tab-social" class="tab-btn" onclick="switchTab('social')">📝 ブログ</button>
   </div>
 
-  <div id="kw-card" class="card">
-    <div class="card-title">検索キーワード <span>※🔔で新着通知対象</span></div>
-    <div id="chips-kw" class="chips"></div>
-    <div class="input-group">
-      <input type="text" id="kw-input" placeholder="追加キーワード..." inputmode="text" autocomplete="off" autocorrect="off" autocapitalize="none" spellcheck="false" />
-      <button class="btn btn-secondary" onclick="addItem('kw')">追加</button>
-    </div>
-    <div class="settings-row" id="notify-settings-row">
-      <button type="button" id="notify-perm-btn" class="btn btn-secondary" onclick="requestNotifyPermission()" style="padding:8px 12px; font-size:0.8rem;">通知を許可</button>
-      <span id="notify-status" class="notify-status">通知: 未設定</span>
-    </div>
-    <p class="settings-hint">キーワード右の🔔をオンにすると、その語の新着をブラウザ通知します（自動更新または手動取得時）。初回は「通知を許可」が必要です。</p>
+  <div class="action-bar">
+    <button type="button" id="settings-toggle-btn" class="btn-ghost" onclick="toggleSettingsPanel()">設定</button>
+    <button type="button" id="filter-toggle-btn" class="btn-ghost mobile-only" onclick="openFilterSheet()">絞り込み</button>
+    <div class="spacer"></div>
+    <button type="button" id="desktop-fetch-btn" class="btn" onclick="handleFetch()">取得</button>
   </div>
 
-  <div id="mj-card" class="card" style="display:none">
-    <p style="font-size:0.85rem; color:var(--muted)">Yahoo!トピックスなどから主要ニュースを取得し、自動仕分けします。</p>
+  <div id="status-bar" class="status-bar">
+    <div id="status-info" class="status-info">待機中</div>
+    <div id="filter-summary" class="filter-summary"></div>
   </div>
 
-  <div id="sc-card" class="card" style="display:none">
-    <div class="card-title">個別にキーワード検索 <span>※未入力なら はてな＆noteの注目記事</span></div>
+  <div id="settings-panel" class="settings-panel card">
+    <div id="kw-section" class="settings-section">
+      <div class="card-title">検索キーワード <span>※🔔で新着通知対象</span></div>
+      <div id="chips-kw" class="chips"></div>
+      <div class="input-group">
+        <input type="text" id="kw-input" placeholder="追加キーワード..." inputmode="text" autocomplete="off" autocorrect="off" autocapitalize="none" spellcheck="false" />
+        <button class="btn btn-secondary" onclick="addItem('kw')">追加</button>
+      </div>
+      <div class="settings-row" id="notify-settings-row">
+        <button type="button" id="notify-perm-btn" class="btn btn-secondary" onclick="requestNotifyPermission()" style="padding:8px 12px; font-size:0.8rem;">通知を許可</button>
+        <span id="notify-status" class="notify-status">通知: 未設定</span>
+      </div>
+      <p class="settings-hint">キーワード右の🔔をオンにすると、その語の新着をブラウザ通知します。初回は「通知を許可」が必要です。</p>
+    </div>
+
+    <div id="ng-section" class="settings-section">
+      <div class="card-title">除外(NG)ワード <span>※全タブ共通</span></div>
+      <div id="chips-ng" class="chips"></div>
+      <div class="input-group">
+        <input type="text" id="ng-input" placeholder="例: 公明新聞, PR TIMES" inputmode="text" autocomplete="off" autocorrect="off" autocapitalize="none" spellcheck="false" />
+        <button class="btn btn-secondary" onclick="addItem('ng')">追加</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="mj-card" class="tab-panel card">
+    <p style="font-size:0.85rem; color:var(--muted); margin:0;">Yahoo!トピックスなどから主要ニュースを取得し、自動仕分けします。</p>
+  </div>
+
+  <div id="sc-card" class="tab-panel card">
+    <div class="card-title">ブログ検索 <span>※未入力なら はてな＆noteの注目</span></div>
     <div class="input-group">
       <input type="text" id="sc-input" placeholder="検索したいワード（例: 政治, ライフハック）" inputmode="search" autocomplete="off" autocorrect="off" autocapitalize="none" spellcheck="false" />
-      <button class="btn btn-secondary" onclick="handleFetch()">検索</button>
     </div>
   </div>
 
-  <div id="ng-card" class="card">
-    <div class="card-title">除外(NG)ワード <span>※全タブ共通で非表示にします</span></div>
-    <div id="chips-ng" class="chips"></div>
-    <div class="input-group">
-      <input type="text" id="ng-input" placeholder="例: 公明新聞, PR TIMES" inputmode="text" autocomplete="off" autocorrect="off" autocapitalize="none" spellcheck="false" />
-      <button class="btn btn-secondary" onclick="addItem('ng')">追加</button>
+  <div id="sheet-backdrop" class="sheet-backdrop" onclick="closeFilterSheet()"></div>
+  <div id="filter-sheet">
+    <div class="sheet-header">
+      <span>絞り込み</span>
+      <button type="button" class="btn-ghost" onclick="closeFilterSheet()" style="padding:6px 10px;">閉じる</button>
     </div>
-  </div>
-
-  <div class="controls">
-    <div class="controls-left">
-      <select id="count-sel" class="sort-select">
-        <option value="10">10件</option>
-        <option value="20">20件</option>
-        <option value="30">30件</option>
-        <option value="50">50件</option>
-        <option value="100">100件</option>
-      </select>
-      <select id="sort-sel" class="sort-select" onchange="renderTable()">
-        <option value="date">新しい順</option>
-        <option value="hot">🔥 話題順</option>
-        <option id="sort-opt-keyword" value="keyword">キーワード順</option>
-      </select>
-      
-      <select id="news-kw-sel" class="sort-select" onchange="renderTable()">
-        <option value="all">全キーワード</option>
-      </select>
-
-      <select id="major-cat-sel" class="sort-select" style="display:none;" onchange="renderTable()">
-        <option value="all">全カテゴリ</option>
-        <option value="政治">🏛 政治</option>
-        <option value="経済">💴 経済</option>
-        <option value="社会">🚨 社会</option>
-        <option value="天気">🌤 天気</option>
-        <option value="国際">🌍 国際</option>
-        <option value="芸能">✨ 芸能</option>
-        <option value="スポーツ">⚾ スポーツ</option>
-        <option value="その他">📌 その他</option>
-      </select>
-
-      <select id="auto-refresh-sel" class="sort-select" onchange="onAutoRefreshChange()" title="ページ表示中に現在タブを自動再取得">
-        <option value="0">自動更新オフ</option>
-        <option value="1">自動 1分</option>
-        <option value="3">自動 3分</option>
-        <option value="5">自動 5分</option>
-        <option value="10">自動 10分</option>
-        <option value="15">自動 15分</option>
-        <option value="30">自動 30分</option>
-      </select>
+    <div class="filter-fields">
+      <div class="filter-field">
+        <label for="sort-sel">並び</label>
+        <select id="sort-sel" class="sort-select" onchange="onFilterChange()">
+          <option value="date">新しい順</option>
+          <option value="hot">話題順</option>
+          <option id="sort-opt-keyword" value="keyword">キーワード順</option>
+        </select>
+      </div>
+      <div class="filter-field" id="news-kw-field">
+        <label for="news-kw-sel">キーワード</label>
+        <select id="news-kw-sel" class="sort-select" onchange="onFilterChange()">
+          <option value="all">全キーワード</option>
+        </select>
+      </div>
+      <div class="filter-field" id="major-cat-field" style="display:none;">
+        <label for="major-cat-sel">カテゴリ</label>
+        <select id="major-cat-sel" class="sort-select" onchange="onFilterChange()">
+          <option value="all">全カテゴリ</option>
+          <option value="政治">政治</option>
+          <option value="経済">経済</option>
+          <option value="社会">社会</option>
+          <option value="天気">天気</option>
+          <option value="国際">国際</option>
+          <option value="芸能">芸能</option>
+          <option value="スポーツ">スポーツ</option>
+          <option value="その他">その他</option>
+        </select>
+      </div>
+      <div class="filter-field desktop-only-filters">
+        <label for="count-sel">件数</label>
+        <select id="count-sel" class="sort-select">
+          <option value="10">10件</option>
+          <option value="20">20件</option>
+          <option value="30">30件</option>
+          <option value="50">50件</option>
+          <option value="100">100件</option>
+        </select>
+      </div>
+      <div class="filter-field desktop-only-filters">
+        <label for="auto-refresh-sel">自動更新</label>
+        <select id="auto-refresh-sel" class="sort-select" onchange="onAutoRefreshChange()" title="ページ表示中に現在タブを自動再取得">
+          <option value="0">オフ</option>
+          <option value="1">1分</option>
+          <option value="3">3分</option>
+          <option value="5">5分</option>
+          <option value="10">10分</option>
+          <option value="15">15分</option>
+          <option value="30">30分</option>
+        </select>
+      </div>
     </div>
-    <div style="display: flex; align-items: center; gap: 8px;">
-      <div id="status-info" class="status-info">待機中</div>
-      <button id="main-fetch-btn" class="btn" onclick="handleFetch()">取得</button>
+    <div class="filter-fields mobile-only" style="margin-top:10px;">
+      <div class="filter-field">
+        <label for="count-sel-mobile">件数</label>
+        <select id="count-sel-mobile" class="sort-select"></select>
+      </div>
+      <div class="filter-field">
+        <label for="auto-refresh-sel-mobile">自動更新</label>
+        <select id="auto-refresh-sel-mobile" class="sort-select"></select>
+      </div>
+    </div>
+    <div class="sheet-actions mobile-only">
+      <button type="button" class="btn" onclick="applyFilterSheet()">適用</button>
     </div>
   </div>
 
@@ -214,9 +331,16 @@
   </div>
 
   <div id="results">
-    <div id="results-info">取得ボタンを押してください</div>
+    <div id="results-info">下の「取得」を押してください</div>
   </div>
 </main>
+
+<div class="fetch-bar mobile-only">
+  <div class="fetch-bar-inner">
+    <div id="fetch-bar-status" class="fetch-bar-status">待機中</div>
+    <button id="main-fetch-btn" class="btn" onclick="handleFetch()">取得</button>
+  </div>
+</div>
 
 <script>
 // ★ プロのコードから移植：安全な文字変換
@@ -251,7 +375,11 @@ let savedCount = localStorage.getItem('myFetchCount') || '20';
 const countSelEl = document.getElementById('count-sel');
 if (countSelEl) {
   countSelEl.value = savedCount;
-  countSelEl.addEventListener('change', e => localStorage.setItem('myFetchCount', e.target.value));
+  countSelEl.addEventListener('change', e => {
+    localStorage.setItem('myFetchCount', e.target.value);
+    syncTwinSelect('count-sel', 'count-sel-mobile', e.target.value);
+    updateFilterSummary();
+  });
 }
 
 let savedAutoRefresh = localStorage.getItem('myAutoRefreshMin') || '0';
@@ -263,6 +391,93 @@ let currentTab = 'news';
 let isFetching = false;
 let autoRefreshTimer = null;
 let lastFetchAt = null;
+let settingsOpen = false;
+
+function syncTwinSelect(primaryId, twinId, value) {
+  const twin = document.getElementById(twinId);
+  if (twin && twin.value !== value) twin.value = value;
+}
+
+function initMobileFilterSelects() {
+  const countMobile = document.getElementById('count-sel-mobile');
+  const autoMobile = document.getElementById('auto-refresh-sel-mobile');
+  const countMain = document.getElementById('count-sel');
+  const autoMain = document.getElementById('auto-refresh-sel');
+  if (countMobile && countMain) {
+    countMobile.innerHTML = countMain.innerHTML;
+    countMobile.value = countMain.value;
+    countMobile.addEventListener('change', () => {
+      countMain.value = countMobile.value;
+      localStorage.setItem('myFetchCount', countMobile.value);
+      updateFilterSummary();
+    });
+  }
+  if (autoMobile && autoMain) {
+    autoMobile.innerHTML = autoMain.innerHTML;
+    autoMobile.value = autoMain.value;
+    autoMobile.addEventListener('change', () => {
+      autoMain.value = autoMobile.value;
+      onAutoRefreshChange();
+    });
+  }
+}
+
+function toggleSettingsPanel(force) {
+  settingsOpen = (typeof force === 'boolean') ? force : !settingsOpen;
+  const panel = document.getElementById('settings-panel');
+  const btn = document.getElementById('settings-toggle-btn');
+  if (panel) panel.classList.toggle('open', settingsOpen);
+  if (btn) {
+    btn.classList.toggle('active', settingsOpen);
+    btn.textContent = settingsOpen ? '設定を閉じる' : '設定';
+  }
+}
+
+function openFilterSheet() {
+  document.getElementById('filter-sheet')?.classList.add('open');
+  document.getElementById('sheet-backdrop')?.classList.add('open');
+  document.getElementById('filter-toggle-btn')?.classList.add('active');
+}
+
+function closeFilterSheet() {
+  document.getElementById('filter-sheet')?.classList.remove('open');
+  document.getElementById('sheet-backdrop')?.classList.remove('open');
+  document.getElementById('filter-toggle-btn')?.classList.remove('active');
+}
+
+function applyFilterSheet() {
+  onFilterChange();
+  closeFilterSheet();
+}
+
+function onFilterChange() {
+  updateFilterSummary();
+  renderTable();
+}
+
+function updateFilterSummary() {
+  const el = document.getElementById('filter-summary');
+  if (!el) return;
+  const sortSel = document.getElementById('sort-sel');
+  const countSel = document.getElementById('count-sel');
+  const autoSel = document.getElementById('auto-refresh-sel');
+  const parts = [];
+  if (sortSel) {
+    const opt = sortSel.options[sortSel.selectedIndex];
+    if (opt) parts.push(opt.textContent);
+  }
+  if (currentTab === 'news') {
+    const kw = document.getElementById('news-kw-sel');
+    if (kw && kw.value !== 'all') parts.push(kw.value);
+  }
+  if (currentTab === 'major') {
+    const cat = document.getElementById('major-cat-sel');
+    if (cat && cat.value !== 'all') parts.push(cat.value);
+  }
+  if (countSel) parts.push(countSel.value + '件');
+  if (autoSel && autoSel.value !== '0') parts.push('自動' + autoSel.value + '分');
+  el.textContent = parts.join(' · ');
+}
 
 document.getElementById('kw-input').addEventListener('keydown', e => { if (e.key === 'Enter') addItem('kw'); });
 document.getElementById('ng-input').addEventListener('keydown', e => { if (e.key === 'Enter') addItem('ng'); });
@@ -289,25 +504,31 @@ function switchTab(t) {
   currentTab = t;
   document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
   document.getElementById('tab-'+t).classList.add('active');
-  document.getElementById('kw-card').style.display = (t === 'news')   ? 'block' : 'none';
-  document.getElementById('ng-card').style.display = (t === 'news')   ? 'block' : 'none';
-  document.getElementById('mj-card').style.display = (t === 'major')  ? 'block' : 'none';
-  document.getElementById('sc-card').style.display = (t === 'social') ? 'block' : 'none';
+
+  const kwSection = document.getElementById('kw-section');
+  if (kwSection) kwSection.style.display = (t === 'news') ? 'block' : 'none';
+
+  document.getElementById('mj-card')?.classList.toggle('active', t === 'major');
+  document.getElementById('sc-card')?.classList.toggle('active', t === 'social');
+
+  // ニュース以外では設定を自動で閉じる（記事を優先）
+  if (t !== 'news' && settingsOpen) toggleSettingsPanel(false);
 
   const sortOptKeyword = document.getElementById('sort-opt-keyword');
   if (sortOptKeyword) sortOptKeyword.textContent = (t === 'news') ? 'キーワード順' : '出典順';
 
-  const newsKwSel = document.getElementById('news-kw-sel');
-  if (newsKwSel) newsKwSel.style.display = (t === 'news') ? 'inline-block' : 'none';
+  const newsKwField = document.getElementById('news-kw-field');
+  if (newsKwField) newsKwField.style.display = (t === 'news') ? '' : 'none';
 
-  const majorCatSel = document.getElementById('major-cat-sel');
-  if (majorCatSel) majorCatSel.style.display = (t === 'major') ? 'inline-block' : 'none';
+  const majorCatField = document.getElementById('major-cat-field');
+  if (majorCatField) majorCatField.style.display = (t === 'major') ? '' : 'none';
 
   const scInp = document.getElementById('sc-input');
   if (scInp) {
     scInp.removeEventListener('keydown', scInputEnterHandler);
     if (t === 'social') scInp.addEventListener('keydown', scInputEnterHandler);
   }
+  updateFilterSummary();
   renderTable();
 }
 
@@ -338,6 +559,7 @@ function renderChips() {
     `<span class="chip chip-ng">${escapeHtml(k)}<button type="button" class="chip-del" aria-label="${escapeHtml(k)}を削除" onclick="removeItem('ng',${i})">×</button></span>`).join('');
   updateNewsKwSelect();
   updateNotifyStatusUI();
+  updateFilterSummary();
 }
 
 function toggleNotifyKeyword(i) {
@@ -480,9 +702,11 @@ function formatLastFetch() {
 
 function updateStatusText(text) {
   const el = document.getElementById('status-info');
-  if (!el) return;
+  const bar = document.getElementById('fetch-bar-status');
   const suffix = formatLastFetch();
-  el.textContent = suffix && text === '完了' ? `完了 · ${suffix}` : text;
+  const full = suffix && text === '完了' ? `完了 · ${suffix}` : text;
+  if (el) el.textContent = full;
+  if (bar) bar.textContent = text;
 }
 
 function clearAutoRefreshTimer() {
@@ -507,7 +731,9 @@ function onAutoRefreshChange() {
   const sel = document.getElementById('auto-refresh-sel');
   const val = sel ? sel.value : '0';
   localStorage.setItem('myAutoRefreshMin', val);
+  syncTwinSelect('auto-refresh-sel', 'auto-refresh-sel-mobile', val);
   scheduleAutoRefresh();
+  updateFilterSummary();
   const mins = parseInt(val, 10);
   if (mins > 0) updateStatusText(`自動更新: ${mins}分`);
   else updateStatusText('自動更新: オフ');
@@ -683,10 +909,13 @@ function displayTitleForDedup(title) {
 
 async function handleFetch(opts = {}) {
   const silent = !!opts.silent;
-  const btn = document.getElementById('main-fetch-btn');
+  const btns = [
+    document.getElementById('main-fetch-btn'),
+    document.getElementById('desktop-fetch-btn')
+  ].filter(Boolean);
   if (isFetching) return;
   isFetching = true;
-  if (btn) btn.disabled = true;
+  btns.forEach(btn => { btn.disabled = true; });
 
   const excludeParam = encodeURIComponent(ngWords.join(','));
   const fetchCount   = document.getElementById('count-sel').value;
@@ -759,7 +988,10 @@ async function handleFetch(opts = {}) {
     }
   } finally {
     isFetching = false;
-    if (btn) btn.disabled = false;
+    [
+      document.getElementById('main-fetch-btn'),
+      document.getElementById('desktop-fetch-btn')
+    ].filter(Boolean).forEach(btn => { btn.disabled = false; });
     renderTable();
   }
 }
@@ -768,7 +1000,7 @@ function renderTable() {
   let displayData = dataStore[currentTab];
   if (!displayData || displayData.length === 0) {
     if (!document.getElementById('results-info') || document.getElementById('results-info').textContent !== '通信が混み合っています。少し待って再取得してください。') {
-       document.getElementById('results').innerHTML = '<div id="results-info">取得ボタンを押してください</div>';
+       document.getElementById('results').innerHTML = '<div id="results-info">下の「取得」を押してください</div>';
     }
     return;
   }
@@ -884,9 +1116,11 @@ function renderTable() {
 }
 
 renderChips();
+initMobileFilterSelects();
 switchTab(currentTab);
 scheduleAutoRefresh();
 updateNotifyStatusUI();
+updateFilterSummary();
 document.addEventListener('visibilitychange', () => {
   if (document.visibilityState === 'visible' && !isFetching) {
     const mins = parseInt(localStorage.getItem('myAutoRefreshMin') || '0', 10);
@@ -894,6 +1128,9 @@ document.addEventListener('visibilitychange', () => {
       handleFetch({ silent: true, fromTimer: true });
     }
   }
+});
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape') closeFilterSheet();
 });
 </script>
 </body>
