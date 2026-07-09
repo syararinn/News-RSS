@@ -29,10 +29,18 @@
     .chips { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 0.8rem; }
     
     .chip { background: var(--tag-bg); color: var(--tag-text); border: 1px solid var(--tag-border); font-size: 0.75rem; padding: 4px 10px; border-radius: 16px; display: flex; align-items: center; }
-    .chip-del { background: none; border: none; margin-left: 4px; cursor: pointer; font-weight: bold; color: var(--tag-text); padding: 0 4px; }
+    .chip-del, .chip-bell { background: none; border: none; margin-left: 4px; cursor: pointer; font-weight: bold; color: var(--tag-text); padding: 0 4px; line-height: 1; }
+    .chip-bell { opacity: 0.35; font-size: 0.85rem; }
+    .chip-bell.on { opacity: 1; }
+    .chip.has-notify { box-shadow: inset 0 0 0 1px var(--accent); }
     
     .chip-ng { background: #fff0f0; color: #c0392b; border-color: #f5bbb7; }
     .chip-ng .chip-del { color: #c0392b; }
+    .settings-row { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-top: 0.8rem; }
+    .settings-hint { font-size: 0.7rem; color: var(--muted); line-height: 1.4; margin-top: 0.5rem; }
+    .notify-status { font-size: 0.7rem; color: var(--muted); }
+    .notify-status.ok { color: var(--accent); font-weight: 600; }
+    .notify-status.warn { color: #c0392b; font-weight: 600; }
     .input-group { display: flex; gap: 8px; }
     .input-group input { flex: 1; border: 1px solid var(--border); border-radius: 8px; padding: 10px; font-size: 0.9rem; outline: none; }
     .input-group input:focus { border-color: var(--accent); }
@@ -101,7 +109,7 @@
 <body>
 
 <header>
-  <h1>📰 News Dashboard <span class="version">v8.2</span></h1>
+  <h1>📰 News Dashboard <span class="version">v8.3</span></h1>
 </header>
 
 <main>
@@ -112,12 +120,17 @@
   </div>
 
   <div id="kw-card" class="card">
-    <div class="card-title">検索キーワード</div>
+    <div class="card-title">検索キーワード <span>※🔔で新着通知対象</span></div>
     <div id="chips-kw" class="chips"></div>
     <div class="input-group">
       <input type="text" id="kw-input" placeholder="追加キーワード..." inputmode="text" autocomplete="off" autocorrect="off" autocapitalize="none" spellcheck="false" />
       <button class="btn btn-secondary" onclick="addItem('kw')">追加</button>
     </div>
+    <div class="settings-row" id="notify-settings-row">
+      <button type="button" id="notify-perm-btn" class="btn btn-secondary" onclick="requestNotifyPermission()" style="padding:8px 12px; font-size:0.8rem;">通知を許可</button>
+      <span id="notify-status" class="notify-status">通知: 未設定</span>
+    </div>
+    <p class="settings-hint">キーワード右の🔔をオンにすると、その語の新着をブラウザ通知します（自動更新または手動取得時）。初回は「通知を許可」が必要です。</p>
   </div>
 
   <div id="mj-card" class="card" style="display:none">
@@ -171,6 +184,16 @@
         <option value="スポーツ">⚾ スポーツ</option>
         <option value="その他">📌 その他</option>
       </select>
+
+      <select id="auto-refresh-sel" class="sort-select" onchange="onAutoRefreshChange()" title="ページ表示中に現在タブを自動再取得">
+        <option value="0">自動更新オフ</option>
+        <option value="1">自動 1分</option>
+        <option value="3">自動 3分</option>
+        <option value="5">自動 5分</option>
+        <option value="10">自動 10分</option>
+        <option value="15">自動 15分</option>
+        <option value="30">自動 30分</option>
+      </select>
     </div>
     <div style="display: flex; align-items: center; gap: 8px;">
       <div id="status-info" class="status-info">待機中</div>
@@ -212,6 +235,9 @@ function safeLoadArray(key, defaultVal) {
 let keywords     = safeLoadArray('myKeywords', ["公明党","自民党","立憲","国会","ドローン","麻生区","新百合ヶ丘"]);
 let ngWords      = safeLoadArray('myNgWords', []);
 let visitedLinks = safeLoadArray('myVisitedLinks', []);
+let notifyKeywords = safeLoadArray('myNotifyKeywords', []).filter(k => keywords.includes(k));
+let knownNotifyLinks = new Set(safeLoadArray('myKnownNotifyLinks', []));
+let seededNotifyKeywords = new Set(safeLoadArray('mySeededNotifyKeywords', []).filter(k => notifyKeywords.includes(k)));
 
 let savedCount = localStorage.getItem('myFetchCount') || '20';
 const countSelEl = document.getElementById('count-sel');
@@ -220,8 +246,15 @@ if (countSelEl) {
   countSelEl.addEventListener('change', e => localStorage.setItem('myFetchCount', e.target.value));
 }
 
+let savedAutoRefresh = localStorage.getItem('myAutoRefreshMin') || '0';
+const autoRefreshSel = document.getElementById('auto-refresh-sel');
+if (autoRefreshSel) autoRefreshSel.value = savedAutoRefresh;
+
 let dataStore = { news: [], major: [], social: [] };
 let currentTab = 'news';
+let isFetching = false;
+let autoRefreshTimer = null;
+let lastFetchAt = null;
 
 document.getElementById('kw-input').addEventListener('keydown', e => { if (e.key === 'Enter') addItem('kw'); });
 document.getElementById('ng-input').addEventListener('keydown', e => { if (e.key === 'Enter') addItem('ng'); });
@@ -288,11 +321,189 @@ function updateNewsKwSelect() {
 }
 
 function renderChips() {
-  document.getElementById('chips-kw').innerHTML = keywords.map((k, i) =>
-    `<span class="chip">${escapeHtml(k)}<button class="chip-del" onclick="removeItem('kw',${i})">×</button></span>`).join('');
+  document.getElementById('chips-kw').innerHTML = keywords.map((k, i) => {
+    const on = notifyKeywords.includes(k);
+    return `<span class="chip${on ? ' has-notify' : ''}">${escapeHtml(k)}` +
+      `<button type="button" class="chip-bell${on ? ' on' : ''}" title="${on ? '新着通知オン' : '新着通知オフ'}" aria-label="${escapeHtml(k)}の新着通知を${on ? 'オフ' : 'オン'}" onclick="toggleNotifyKeyword(${i})">🔔</button>` +
+      `<button type="button" class="chip-del" aria-label="${escapeHtml(k)}を削除" onclick="removeItem('kw',${i})">×</button></span>`;
+  }).join('');
   document.getElementById('chips-ng').innerHTML = ngWords.map((k, i) =>
-    `<span class="chip chip-ng">${escapeHtml(k)}<button class="chip-del" onclick="removeItem('ng',${i})">×</button></span>`).join('');
+    `<span class="chip chip-ng">${escapeHtml(k)}<button type="button" class="chip-del" aria-label="${escapeHtml(k)}を削除" onclick="removeItem('ng',${i})">×</button></span>`).join('');
   updateNewsKwSelect();
+  updateNotifyStatusUI();
+}
+
+function toggleNotifyKeyword(i) {
+  const kw = keywords[i];
+  if (!kw) return;
+  const idx = notifyKeywords.indexOf(kw);
+  if (idx === -1) {
+    notifyKeywords.push(kw);
+    // すでに画面にある記事は通知しない（次回以降の新着のみ）
+    dataStore.news.forEach(it => {
+      if (it.keyword === kw && it.link) knownNotifyLinks.add(it.link);
+    });
+    if (dataStore.news.some(it => it.keyword === kw)) {
+      seededNotifyKeywords.add(kw);
+    } else {
+      seededNotifyKeywords.delete(kw);
+    }
+    saveKnownNotifyLinks();
+    if (typeof Notification !== 'undefined' && Notification.permission === 'default') {
+      requestNotifyPermission();
+    }
+  } else {
+    notifyKeywords.splice(idx, 1);
+    seededNotifyKeywords.delete(kw);
+    saveKnownNotifyLinks();
+  }
+  saveData();
+  renderChips();
+}
+
+function saveKnownNotifyLinks() {
+  const arr = [...knownNotifyLinks];
+  if (arr.length > 800) arr.splice(0, arr.length - 800);
+  localStorage.setItem('myKnownNotifyLinks', JSON.stringify(arr));
+  localStorage.setItem('mySeededNotifyKeywords', JSON.stringify([...seededNotifyKeywords]));
+}
+
+function updateNotifyStatusUI() {
+  const el = document.getElementById('notify-status');
+  const btn = document.getElementById('notify-perm-btn');
+  if (!el) return;
+  if (typeof Notification === 'undefined') {
+    el.textContent = '通知: 非対応';
+    el.className = 'notify-status warn';
+    if (btn) btn.style.display = 'none';
+    return;
+  }
+  const perm = Notification.permission;
+  if (perm === 'granted') {
+    const n = notifyKeywords.length;
+    el.textContent = n > 0 ? `通知: 許可済（${n}語）` : '通知: 許可済（🔔で対象指定）';
+    el.className = 'notify-status ok';
+    if (btn) btn.style.display = 'none';
+  } else if (perm === 'denied') {
+    el.textContent = '通知: ブラウザで拒否中';
+    el.className = 'notify-status warn';
+    if (btn) btn.style.display = 'none';
+  } else {
+    el.textContent = notifyKeywords.length > 0 ? '通知: 許可が必要' : '通知: 未設定';
+    el.className = 'notify-status' + (notifyKeywords.length > 0 ? ' warn' : '');
+    if (btn) btn.style.display = '';
+  }
+}
+
+async function requestNotifyPermission() {
+  if (typeof Notification === 'undefined') {
+    updateNotifyStatusUI();
+    return;
+  }
+  try {
+    await Notification.requestPermission();
+  } catch (e) { /* ignore */ }
+  updateNotifyStatusUI();
+}
+
+function notifyNewArticles(items) {
+  if (!items || !items.length) return;
+  if (!notifyKeywords.length) return;
+
+  const targets = items.filter(it =>
+    it && it.link && it.keyword && notifyKeywords.includes(it.keyword)
+  );
+  if (!targets.length) return;
+
+  const byKw = new Map();
+  targets.forEach(it => {
+    if (!byKw.has(it.keyword)) byKw.set(it.keyword, []);
+    byKw.get(it.keyword).push(it);
+  });
+
+  const freshByKw = new Map();
+  byKw.forEach((list, kw) => {
+    if (!seededNotifyKeywords.has(kw)) {
+      list.forEach(it => knownNotifyLinks.add(it.link));
+      seededNotifyKeywords.add(kw);
+      return;
+    }
+    const fresh = list.filter(it => !knownNotifyLinks.has(it.link));
+    list.forEach(it => knownNotifyLinks.add(it.link));
+    if (fresh.length) freshByKw.set(kw, fresh);
+  });
+  saveKnownNotifyLinks();
+
+  if (typeof Notification === 'undefined' || Notification.permission !== 'granted') return;
+  if (!freshByKw.size) return;
+
+  freshByKw.forEach((list, kw) => {
+    const first = list[0];
+    const title = list.length === 1
+      ? `【${kw}】新着`
+      : `【${kw}】新着 ${list.length}件`;
+    const body = list.length === 1
+      ? first.title
+      : `${first.title} ほか${list.length - 1}件`;
+    try {
+      const n = new Notification(title, {
+        body: body.slice(0, 120),
+        tag: 'news-kw-' + kw,
+        renotify: true
+      });
+      n.onclick = () => {
+        window.focus();
+        if (currentTab !== 'news') switchTab('news');
+        const sel = document.getElementById('news-kw-sel');
+        if (sel && keywords.includes(kw)) {
+          sel.value = kw;
+          renderTable();
+        }
+        n.close();
+      };
+    } catch (e) { /* ignore */ }
+  });
+}
+
+function formatLastFetch() {
+  if (!lastFetchAt) return '';
+  const d = lastFetchAt;
+  return `最終 ${d.getHours()}:${String(d.getMinutes()).padStart(2, '0')}`;
+}
+
+function updateStatusText(text) {
+  const el = document.getElementById('status-info');
+  if (!el) return;
+  const suffix = formatLastFetch();
+  el.textContent = suffix && text === '完了' ? `完了 · ${suffix}` : text;
+}
+
+function clearAutoRefreshTimer() {
+  if (autoRefreshTimer) {
+    clearInterval(autoRefreshTimer);
+    autoRefreshTimer = null;
+  }
+}
+
+function scheduleAutoRefresh() {
+  clearAutoRefreshTimer();
+  const mins = parseInt(localStorage.getItem('myAutoRefreshMin') || '0', 10);
+  if (!mins || mins < 1) return;
+  autoRefreshTimer = setInterval(() => {
+    if (document.visibilityState === 'hidden') return;
+    if (isFetching) return;
+    handleFetch({ silent: true, fromTimer: true });
+  }, mins * 60 * 1000);
+}
+
+function onAutoRefreshChange() {
+  const sel = document.getElementById('auto-refresh-sel');
+  const val = sel ? sel.value : '0';
+  localStorage.setItem('myAutoRefreshMin', val);
+  scheduleAutoRefresh();
+  const mins = parseInt(val, 10);
+  if (mins > 0) updateStatusText(`自動更新: ${mins}分`);
+  else updateStatusText('自動更新: オフ');
 }
 
 function addItem(type) {
@@ -308,7 +519,13 @@ function addItem(type) {
 }
 
 function removeItem(type, i) {
-  if (type === 'kw') keywords.splice(i, 1);
+  if (type === 'kw') {
+    const removed = keywords[i];
+    keywords.splice(i, 1);
+    notifyKeywords = notifyKeywords.filter(k => k !== removed);
+    seededNotifyKeywords.delete(removed);
+    saveKnownNotifyLinks();
+  }
   if (type === 'ng') ngWords.splice(i, 1);
   saveData();
   renderChips();
@@ -317,6 +534,7 @@ function removeItem(type, i) {
 function saveData() {
   localStorage.setItem('myKeywords', JSON.stringify(keywords));
   localStorage.setItem('myNgWords',  JSON.stringify(ngWords));
+  localStorage.setItem('myNotifyKeywords', JSON.stringify(notifyKeywords));
 }
 
 function markAsVisited(link) {
@@ -427,25 +645,29 @@ function applyTopicScores(items) {
   });
 }
 
-async function handleFetch() {
+async function handleFetch(opts = {}) {
+  const silent = !!opts.silent;
   const btn = document.getElementById('main-fetch-btn');
+  if (isFetching) return;
+  isFetching = true;
   if (btn) btn.disabled = true;
 
   const excludeParam = encodeURIComponent(ngWords.join(','));
   const fetchCount   = document.getElementById('count-sel').value;
 
-  showSkeleton();
-  setProgress(5);
+  if (!silent) {
+    showSkeleton();
+    setProgress(5);
+  }
 
   try {
     if (currentTab === 'news') {
-      dataStore.news = [];
       const uniqueNews = [];
       const seenTitlesMap = new Map();
 
       for (let i = 0; i < keywords.length; i++) {
-        document.getElementById('status-info').textContent = `取得中 ${i+1}/${keywords.length}`;
-        setProgress(5 + Math.round(((i) / keywords.length) * 90));
+        updateStatusText(`取得中 ${i+1}/${keywords.length}`);
+        if (!silent) setProgress(5 + Math.round(((i) / keywords.length) * 90));
 
         try {
           const res = await fetch(`/api/rss?keyword=${encodeURIComponent(keywords[i])}&type=news&exclude=${excludeParam}&count=${fetchCount}`);
@@ -470,32 +692,39 @@ async function handleFetch() {
       
       applyTopicScores(uniqueNews);
       dataStore.news = uniqueNews;
-      setProgress(95);
+      notifyNewArticles(uniqueNews);
+      if (!silent) setProgress(95);
 
     } else {
       const type = currentTab;
       const scInput = document.getElementById('sc-input');
       const kw = (type === 'social' && scInput) ? scInput.value.trim() : "";
-      document.getElementById('status-info').textContent = '取得中...';
-      setProgress(40);
+      updateStatusText(opts.fromTimer ? '自動更新中...' : '取得中...');
+      if (!silent) setProgress(40);
       const res = await fetch(`/api/rss?type=${type}&keyword=${encodeURIComponent(kw)}&exclude=${excludeParam}&count=${fetchCount}`);
       if (!res.ok) throw new Error('通信エラー');
       const rawData = await res.json();
       let items = Array.isArray(rawData) ? rawData.map(it => ({ ...it, dt: new Date(it.published || 0) })) : [];
       applyTopicScores(items);
       dataStore[type] = items;
-      setProgress(95);
+      if (!silent) setProgress(95);
     }
 
-    document.getElementById('status-info').textContent = '完了';
-    setProgress(100);
-    setTimeout(() => setProgress(0), 600);
+    lastFetchAt = new Date();
+    updateStatusText('完了');
+    if (!silent) {
+      setProgress(100);
+      setTimeout(() => setProgress(0), 600);
+    }
 
   } catch (error) {
-    document.getElementById('status-info').textContent = '⚠️ 取得エラー';
-    setProgress(0);
-    document.getElementById('results').innerHTML = '<div id="results-info">通信が混み合っています。少し待って再取得してください。</div>';
+    updateStatusText('⚠️ 取得エラー');
+    if (!silent) {
+      setProgress(0);
+      document.getElementById('results').innerHTML = '<div id="results-info">通信が混み合っています。少し待って再取得してください。</div>';
+    }
   } finally {
+    isFetching = false;
     if (btn) btn.disabled = false;
     renderTable();
   }
@@ -611,6 +840,16 @@ function renderTable() {
 
 renderChips();
 switchTab(currentTab);
+scheduleAutoRefresh();
+updateNotifyStatusUI();
+document.addEventListener('visibilitychange', () => {
+  if (document.visibilityState === 'visible' && !isFetching) {
+    const mins = parseInt(localStorage.getItem('myAutoRefreshMin') || '0', 10);
+    if (mins > 0 && lastFetchAt && (Date.now() - lastFetchAt.getTime()) >= mins * 60 * 1000) {
+      handleFetch({ silent: true, fromTimer: true });
+    }
+  }
+});
 </script>
 </body>
 </html>
