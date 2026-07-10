@@ -21,7 +21,7 @@
     header h1 { font-size: 1.2rem; display: flex; align-items: center; justify-content: center; gap: 6px; }
     header h1 .version { font-size: 0.6rem; background: rgba(255,255,255,0.2); padding: 2px 6px; border-radius: 10px; font-weight: normal; }
     main { max-width: 900px; margin: 0 auto; padding: 1rem; }
-    .tabs { display: flex; gap: 4px; margin-bottom: 0.6rem; border-bottom: 2px solid var(--border); position: sticky; top: 0; background: var(--bg); z-index: 100; }
+    .tabs { display: flex; gap: 4px; margin-bottom: 0.5rem; border-bottom: 2px solid var(--border); position: sticky; top: 0; background: var(--bg); z-index: 100; }
     .tab-btn { background: none; border: none; font-size: 0.9rem; font-weight: 600; color: var(--muted); padding: 12px 5px; flex: 1; cursor: pointer; }
     .tab-btn.active { color: var(--accent); border-bottom: 3px solid var(--accent); background: var(--accent-light); }
     .card { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 1rem; margin-bottom: 1rem; box-shadow: 0 2px 4px rgba(0,0,0,0.02); }
@@ -55,6 +55,23 @@
 
     .action-bar { display: flex; align-items: center; gap: 8px; margin-bottom: 0.6rem; flex-wrap: wrap; }
     .action-bar .spacer { flex: 1; min-width: 4px; }
+    .quick-kw-bar { display: none; margin: 0 0 0.7rem; position: sticky; top: 48px; z-index: 99; background: var(--bg); padding-top: 2px; }
+    .quick-kw-bar.visible { display: block; }
+    .quick-kw-scroll {
+      display: flex; gap: 8px; overflow-x: auto; -webkit-overflow-scrolling: touch;
+      padding: 2px 2px 6px; scrollbar-width: thin;
+    }
+    .quick-kw-scroll::-webkit-scrollbar { height: 4px; }
+    .quick-kw-scroll::-webkit-scrollbar-thumb { background: var(--border); border-radius: 4px; }
+    .quick-kw-chip {
+      flex: 0 0 auto; border: 1px solid var(--border); background: var(--surface);
+      color: var(--text); border-radius: 999px; padding: 8px 14px; font-size: 0.82rem;
+      font-weight: 600; cursor: pointer; min-height: 40px; white-space: nowrap;
+    }
+    .quick-kw-chip.active {
+      background: var(--accent); color: #fff; border-color: var(--accent);
+    }
+    .quick-kw-chip:active { transform: scale(0.98); }
     .status-bar {
       display: flex; align-items: center; justify-content: space-between; gap: 8px;
       margin-bottom: 0.6rem; padding: 8px 10px; background: var(--surface);
@@ -202,7 +219,7 @@
 <body>
 
 <header>
-  <h1>📰 News Dashboard <span class="version">v8.6</span></h1>
+  <h1>📰 News Dashboard <span class="version">v8.7</span></h1>
 </header>
 
 <main>
@@ -211,6 +228,10 @@
     <button id="tab-major" class="tab-btn" onclick="switchTab('major')">🌍 主要</button>
     <button id="tab-social" class="tab-btn" onclick="switchTab('social')">📝 ブログ</button>
     <button id="tab-fav" class="tab-btn" onclick="switchTab('fav')">★ お気に入り</button>
+  </div>
+
+  <div id="quick-kw-bar" class="quick-kw-bar visible">
+    <div id="quick-kw-scroll" class="quick-kw-scroll" role="tablist" aria-label="キーワード切替"></div>
   </div>
 
   <div class="action-bar">
@@ -495,6 +516,7 @@ function applyFilterSheet() {
 }
 
 function onFilterChange() {
+  renderQuickKeywordBar();
   updateFilterSummary();
   renderTable();
 }
@@ -703,6 +725,7 @@ function switchTab(t) {
 
   document.getElementById('mj-card')?.classList.toggle('active', t === 'major');
   document.getElementById('sc-card')?.classList.toggle('active', t === 'social');
+  document.getElementById('quick-kw-bar')?.classList.toggle('visible', t === 'news');
 
   // ニュース以外では設定を自動で閉じる（記事を優先）
   if (t !== 'news' && settingsOpen) toggleSettingsPanel(false);
@@ -731,8 +754,64 @@ function switchTab(t) {
     scInp.removeEventListener('keydown', scInputEnterHandler);
     if (t === 'social') scInp.addEventListener('keydown', scInputEnterHandler);
   }
+  renderQuickKeywordBar();
   updateFilterSummary();
   renderTable();
+}
+
+function getSelectedKeywordFilter() {
+  const sel = document.getElementById('news-kw-sel');
+  return sel ? sel.value : 'all';
+}
+
+function setSelectedKeywordFilter(value, opts = {}) {
+  const sel = document.getElementById('news-kw-sel');
+  if (sel) sel.value = value;
+  renderQuickKeywordBar();
+  updateFilterSummary();
+  if (!opts.skipRender) renderTable();
+}
+
+function selectQuickKeyword(value) {
+  if (currentTab !== 'news') switchTab('news');
+  setSelectedKeywordFilter(value);
+  // 選択中チップが見える位置へスクロール
+  const active = document.querySelector('.quick-kw-chip.active');
+  if (active && typeof active.scrollIntoView === 'function') {
+    active.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' });
+  }
+}
+
+function renderQuickKeywordBar() {
+  const bar = document.getElementById('quick-kw-bar');
+  const scroll = document.getElementById('quick-kw-scroll');
+  if (!bar || !scroll) return;
+  bar.classList.toggle('visible', currentTab === 'news');
+  if (currentTab !== 'news') return;
+
+  const currentVal = getSelectedKeywordFilter();
+  const safeCurrent = (currentVal === 'all' || keywords.includes(currentVal)) ? currentVal : 'all';
+  if (safeCurrent !== currentVal) {
+    const sel = document.getElementById('news-kw-sel');
+    if (sel) sel.value = 'all';
+  }
+
+  const chips = [
+    `<button type="button" class="quick-kw-chip${safeCurrent === 'all' ? ' active' : ''}" data-kw="all" aria-pressed="${safeCurrent === 'all'}">すべて</button>`
+  ];
+  keywords.forEach(kw => {
+    const on = safeCurrent === kw;
+    chips.push(
+      `<button type="button" class="quick-kw-chip${on ? ' active' : ''}" data-kw="${escapeHtml(kw)}" aria-pressed="${on}">${escapeHtml(kw)}</button>`
+    );
+  });
+  scroll.innerHTML = chips.join('');
+  scroll.querySelectorAll('.quick-kw-chip').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const raw = btn.getAttribute('data-kw') || 'all';
+      selectQuickKeyword(raw);
+    });
+  });
 }
 
 function updateNewsKwSelect() {
@@ -749,6 +828,7 @@ function updateNewsKwSelect() {
   } else {
     sel.value = 'all';
   }
+  renderQuickKeywordBar();
 }
 
 function renderChips() {
@@ -886,12 +966,7 @@ function notifyNewArticles(items) {
       });
       n.onclick = () => {
         window.focus();
-        if (currentTab !== 'news') switchTab('news');
-        const sel = document.getElementById('news-kw-sel');
-        if (sel && keywords.includes(kw)) {
-          sel.value = kw;
-          renderTable();
-        }
+        selectQuickKeyword(kw);
         n.close();
       };
     } catch (e) { /* ignore */ }
