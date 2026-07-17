@@ -55,7 +55,25 @@
 
     .action-bar { display: flex; align-items: center; gap: 8px; margin-bottom: 0.6rem; flex-wrap: wrap; }
     .action-bar .spacer { flex: 1; min-width: 4px; }
-    .quick-kw-bar { display: none; margin: 0 0 0.7rem; position: sticky; top: 48px; z-index: 99; background: var(--bg); padding-top: 2px; }
+    .quick-group-bar { display: none; margin: 0 0 0.5rem; position: sticky; top: 48px; z-index: 100; background: var(--bg); padding-top: 2px; }
+    .quick-group-bar.visible { display: block; }
+    .quick-group-label { font-size: 0.68rem; font-weight: 700; color: var(--muted); margin: 0 2px 4px; }
+    .quick-group-scroll {
+      display: flex; gap: 8px; overflow-x: auto; -webkit-overflow-scrolling: touch;
+      padding: 2px 2px 4px; scrollbar-width: thin;
+    }
+    .quick-group-scroll::-webkit-scrollbar { height: 4px; }
+    .quick-group-scroll::-webkit-scrollbar-thumb { background: var(--border); border-radius: 4px; }
+    .quick-group-chip {
+      flex: 0 0 auto; border: 1px solid var(--tag-border); background: var(--tag-bg);
+      color: var(--tag-text); border-radius: 999px; padding: 7px 13px; font-size: 0.8rem;
+      font-weight: 600; cursor: pointer; min-height: 36px; white-space: nowrap;
+    }
+    .quick-group-chip.active {
+      background: var(--accent); color: #fff; border-color: var(--accent);
+    }
+    .quick-group-chip:active { transform: scale(0.98); }
+    .quick-kw-bar { display: none; margin: 0 0 0.7rem; position: sticky; top: 96px; z-index: 99; background: var(--bg); padding-top: 2px; }
     .quick-kw-bar.visible { display: block; }
     .quick-kw-scroll {
       display: flex; gap: 8px; overflow-x: auto; -webkit-overflow-scrolling: touch;
@@ -219,7 +237,7 @@
 <body>
 
 <header>
-  <h1>📰 News Dashboard <span class="version">v8.7</span></h1>
+  <h1>📰 News Dashboard <span class="version">v8.8</span></h1>
 </header>
 
 <main>
@@ -228,6 +246,11 @@
     <button id="tab-major" class="tab-btn" onclick="switchTab('major')">🌍 主要</button>
     <button id="tab-social" class="tab-btn" onclick="switchTab('social')">📝 ブログ</button>
     <button id="tab-fav" class="tab-btn" onclick="switchTab('fav')">★ お気に入り</button>
+  </div>
+
+  <div id="quick-group-bar" class="quick-group-bar">
+    <div class="quick-group-label">キーワードグループ</div>
+    <div id="quick-group-scroll" class="quick-group-scroll" role="tablist" aria-label="キーワードグループ切替"></div>
   </div>
 
   <div id="quick-kw-bar" class="quick-kw-bar visible">
@@ -263,14 +286,14 @@
       <div class="card-title" style="margin-top:1rem;">キーワードグループ</div>
       <div class="input-group" style="margin-bottom:8px;">
         <select id="kw-group-sel" class="sort-select" style="flex:1;"></select>
-        <button type="button" class="btn btn-secondary" onclick="applyKeywordGroup()">切替</button>
+        <button type="button" class="btn btn-secondary" onclick="loadKeywordGroupForEdit()">編集用に読み込み</button>
       </div>
       <div class="input-group">
         <input type="text" id="kw-group-name" placeholder="グループ名（例: 政治, 地元）" inputmode="text" autocomplete="off" />
         <button type="button" class="btn btn-secondary" onclick="saveKeywordGroup()">保存</button>
         <button type="button" class="btn-ghost" onclick="deleteKeywordGroup()" title="選択中グループを削除">削除</button>
       </div>
-      <p class="settings-hint">いまのキーワード一覧を名前付きで保存し、あとから切り替えられます。</p>
+      <p class="settings-hint">いまのキーワード一覧を名前付きで保存します。表示の切り替えは表画面上のグループボタンから行えます。</p>
     </div>
 
     <div id="ng-section" class="settings-section">
@@ -338,6 +361,13 @@
           <option value="その他">その他</option>
         </select>
       </div>
+      <div class="filter-field" id="fetch-scope-field">
+        <label for="fetch-scope-sel">取得範囲</label>
+        <select id="fetch-scope-sel" class="sort-select" onchange="onFetchScopeChange()" title="ニュース取得時にどのキーワードを対象にするか">
+          <option value="active">表示中のグループ</option>
+          <option value="all">全グループ</option>
+        </select>
+      </div>
       <div class="filter-field desktop-only-filters">
         <label for="count-sel">件数</label>
         <select id="count-sel" class="sort-select">
@@ -362,6 +392,10 @@
       </div>
     </div>
     <div class="filter-fields mobile-only" style="margin-top:10px;">
+      <div class="filter-field">
+        <label for="fetch-scope-sel-mobile">取得範囲</label>
+        <select id="fetch-scope-sel-mobile" class="sort-select"></select>
+      </div>
       <div class="filter-field">
         <label for="count-sel-mobile">件数</label>
         <select id="count-sel-mobile" class="sort-select"></select>
@@ -430,6 +464,24 @@ let keywordGroups = (() => {
   } catch (e) { return []; }
 })();
 let activeGroupName = localStorage.getItem('myActiveKeywordGroup') || '';
+let fetchScope = (() => {
+  const v = localStorage.getItem('myFetchScope');
+  return (v === 'all' || v === 'active') ? v : 'active';
+})();
+const articleCacheByKeyword = new Map();
+
+if (activeGroupName) {
+  const bootGroup = keywordGroups.find(g => g.name === activeGroupName);
+  if (bootGroup) {
+    keywords = [...bootGroup.keywords];
+    notifyKeywords = (bootGroup.notify || []).filter(k => keywords.includes(k));
+  } else {
+    activeGroupName = '';
+  }
+}
+
+const fetchScopeSelEl = document.getElementById('fetch-scope-sel');
+if (fetchScopeSelEl) fetchScopeSelEl.value = fetchScope;
 
 let savedCount = localStorage.getItem('myFetchCount') || '20';
 const countSelEl = document.getElementById('count-sel');
@@ -483,6 +535,16 @@ function initMobileFilterSelects() {
     autoMobile.addEventListener('change', () => {
       autoMain.value = autoMobile.value;
       onAutoRefreshChange();
+    });
+  }
+  const fetchScopeMobile = document.getElementById('fetch-scope-sel-mobile');
+  const fetchScopeMain = document.getElementById('fetch-scope-sel');
+  if (fetchScopeMobile && fetchScopeMain) {
+    fetchScopeMobile.innerHTML = fetchScopeMain.innerHTML;
+    fetchScopeMobile.value = fetchScopeMain.value;
+    fetchScopeMobile.addEventListener('change', () => {
+      fetchScopeMain.value = fetchScopeMobile.value;
+      onFetchScopeChange();
     });
   }
 }
@@ -542,6 +604,7 @@ function updateFilterSummary() {
     const kw = document.getElementById('news-kw-sel');
     if (kw && kw.value !== 'all') parts.push(kw.value);
     if (activeGroupName) parts.push('G:' + activeGroupName);
+    parts.push(fetchScope === 'all' ? '全G取得' : '表示G取得');
   }
   if (currentTab === 'major') {
     const cat = document.getElementById('major-cat-sel');
@@ -614,6 +677,89 @@ function toggleFavorite(link, event) {
   renderTable();
 }
 
+function onFetchScopeChange() {
+  const sel = document.getElementById('fetch-scope-sel');
+  const val = sel ? sel.value : 'active';
+  fetchScope = (val === 'all') ? 'all' : 'active';
+  localStorage.setItem('myFetchScope', fetchScope);
+  syncTwinSelect('fetch-scope-sel', 'fetch-scope-sel-mobile', fetchScope);
+  updateFilterSummary();
+  updateStatusText(fetchScope === 'all' ? '取得範囲: 全グループ' : '取得範囲: 表示中のグループ');
+}
+
+function getAllUniqueKeywords() {
+  const set = new Set(keywords);
+  keywordGroups.forEach(g => (g.keywords || []).forEach(k => set.add(k)));
+  return [...set];
+}
+
+function getKeywordsForFetch(opts = {}) {
+  if (opts.keywords && opts.keywords.length) return [...opts.keywords];
+  if (opts.groupName) {
+    const group = keywordGroups.find(g => g.name === opts.groupName);
+    return group ? [...group.keywords] : [];
+  }
+  if (fetchScope === 'all') return getAllUniqueKeywords();
+  return [...keywords];
+}
+
+function isGroupCacheComplete(groupName) {
+  const group = keywordGroups.find(g => g.name === groupName);
+  if (!group || !group.keywords.length) return false;
+  return group.keywords.every(kw => articleCacheByKeyword.has(kw));
+}
+
+function mergeNewsFromCache(kwList) {
+  const uniqueNews = [];
+  const seenTitlesMap = new Map();
+  kwList.forEach(kw => {
+    const cached = articleCacheByKeyword.get(kw);
+    if (!cached) return;
+    cached.items.forEach(item => {
+      const norm = displayTitleForDedup(item.title);
+      if (!seenTitlesMap.has(norm)) {
+        seenTitlesMap.set(norm, item);
+        uniqueNews.push(item);
+      }
+    });
+  });
+  applyTopicScores(uniqueNews);
+  return uniqueNews;
+}
+
+function refreshNewsDisplayFromCache() {
+  dataStore.news = mergeNewsFromCache(keywords);
+}
+
+async function fetchKeywordsForList(keywordList, opts = {}) {
+  const silent = !!opts.silent;
+  const uniqueList = [...new Set(keywordList.filter(Boolean))];
+  if (!uniqueList.length) return;
+
+  const excludeParam = encodeURIComponent(ngWords.join(','));
+  const fetchCount = document.getElementById('count-sel').value;
+  const label = opts.label || '';
+
+  for (let i = 0; i < uniqueList.length; i++) {
+    const kw = uniqueList[i];
+    const statusLabel = label ? ` (${label})` : '';
+    updateStatusText(`取得中 ${i + 1}/${uniqueList.length}${statusLabel}`);
+    if (!silent) setProgress(5 + Math.round((i / uniqueList.length) * 90));
+
+    try {
+      const res = await fetch(`/api/rss?keyword=${encodeURIComponent(kw)}&type=news&exclude=${excludeParam}&count=${fetchCount}`);
+      if (res.ok) {
+        const rawData = await res.json();
+        const items = normalizeItems(rawData);
+        articleCacheByKeyword.set(kw, { items, fetchedAt: new Date() });
+      }
+    } catch (e) {
+      console.error('Fetch skipped for:', kw);
+    }
+    await new Promise(r => setTimeout(r, 300));
+  }
+}
+
 function renderKeywordGroups() {
   const sel = document.getElementById('kw-group-sel');
   if (!sel) return;
@@ -634,6 +780,7 @@ function saveKeywordGroups() {
   if (activeGroupName) localStorage.setItem('myActiveKeywordGroup', activeGroupName);
   else localStorage.removeItem('myActiveKeywordGroup');
   renderKeywordGroups();
+  renderKeywordGroupBar();
   updateFilterSummary();
 }
 
@@ -658,10 +805,41 @@ function saveKeywordGroup() {
   activeGroupName = name;
   if (nameInp) nameInp.value = '';
   saveKeywordGroups();
+  renderKeywordGroupBar();
   updateStatusText(`グループ「${name}」を保存`);
 }
 
-function applyKeywordGroup() {
+async function switchToGroup(name, opts = {}) {
+  const group = keywordGroups.find(g => g.name === name);
+  if (!group) return;
+
+  keywords = [...group.keywords];
+  notifyKeywords = (group.notify || []).filter(k => keywords.includes(k));
+  seededNotifyKeywords = new Set([...seededNotifyKeywords].filter(k => notifyKeywords.includes(k)));
+  activeGroupName = name;
+  saveData();
+  saveKeywordGroups();
+  renderChips();
+  renderKeywordGroupBar();
+  setSelectedKeywordFilter('all', { skipRender: true });
+  updateStatusText(`「${name}」に切替`);
+  updateFilterSummary();
+
+  if (currentTab !== 'news') {
+    renderTable();
+    return;
+  }
+
+  if (isGroupCacheComplete(name) && !opts.forceFetch) {
+    refreshNewsDisplayFromCache();
+    renderTable();
+    return;
+  }
+
+  await handleFetch({ silent: !!opts.silent, groupName: name });
+}
+
+function loadKeywordGroupForEdit() {
   const sel = document.getElementById('kw-group-sel');
   const name = sel ? sel.value : '';
   if (!name) {
@@ -673,12 +851,9 @@ function applyKeywordGroup() {
   keywords = [...group.keywords];
   notifyKeywords = (group.notify || []).filter(k => keywords.includes(k));
   seededNotifyKeywords = new Set([...seededNotifyKeywords].filter(k => notifyKeywords.includes(k)));
-  activeGroupName = name;
   saveData();
-  saveKeywordGroups();
   renderChips();
-  updateStatusText(`「${name}」に切替`);
-  if (currentTab === 'news') handleFetch();
+  updateStatusText(`「${name}」を編集用に読み込み`);
 }
 
 function deleteKeywordGroup() {
@@ -689,8 +864,14 @@ function deleteKeywordGroup() {
     return;
   }
   keywordGroups = keywordGroups.filter(g => g.name !== name);
-  if (activeGroupName === name) activeGroupName = '';
+  const wasActive = activeGroupName === name;
+  if (wasActive) activeGroupName = '';
   saveKeywordGroups();
+  renderKeywordGroupBar();
+  if (wasActive && currentTab === 'news') {
+    refreshNewsDisplayFromCache();
+    renderTable();
+  }
   updateStatusText(`「${name}」を削除`);
 }
 
@@ -725,7 +906,9 @@ function switchTab(t) {
 
   document.getElementById('mj-card')?.classList.toggle('active', t === 'major');
   document.getElementById('sc-card')?.classList.toggle('active', t === 'social');
-  document.getElementById('quick-kw-bar')?.classList.toggle('visible', t === 'news');
+
+  const fetchScopeField = document.getElementById('fetch-scope-field');
+  if (fetchScopeField) fetchScopeField.style.display = (t === 'news') ? '' : 'none';
 
   // ニュース以外では設定を自動で閉じる（記事を優先）
   if (t !== 'news' && settingsOpen) toggleSettingsPanel(false);
@@ -754,9 +937,41 @@ function switchTab(t) {
     scInp.removeEventListener('keydown', scInputEnterHandler);
     if (t === 'social') scInp.addEventListener('keydown', scInputEnterHandler);
   }
+  renderKeywordGroupBar();
   renderQuickKeywordBar();
   updateFilterSummary();
   renderTable();
+}
+
+function renderKeywordGroupBar() {
+  const bar = document.getElementById('quick-group-bar');
+  const scroll = document.getElementById('quick-group-scroll');
+  const kwBar = document.getElementById('quick-kw-bar');
+  if (!bar || !scroll) return;
+
+  const show = currentTab === 'news' && keywordGroups.length > 0;
+  bar.classList.toggle('visible', show);
+  if (kwBar) kwBar.classList.toggle('visible', currentTab === 'news');
+  if (kwBar) kwBar.style.top = show ? '96px' : '48px';
+  if (!show) return;
+
+  const chips = keywordGroups.map(g => {
+    const on = activeGroupName === g.name;
+    return `<button type="button" class="quick-group-chip${on ? ' active' : ''}" data-group="${escapeHtml(g.name)}" aria-pressed="${on}">${escapeHtml(g.name)} (${g.keywords.length})</button>`;
+  });
+  scroll.innerHTML = chips.join('');
+
+  scroll.querySelectorAll('.quick-group-chip').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const name = btn.getAttribute('data-group');
+      if (name && name !== activeGroupName) switchToGroup(name);
+    });
+  });
+
+  const active = scroll.querySelector('.quick-group-chip.active');
+  if (active && typeof active.scrollIntoView === 'function') {
+    active.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' });
+  }
 }
 
 function getSelectedKeywordFilter() {
@@ -843,6 +1058,7 @@ function renderChips() {
   updateNewsKwSelect();
   updateNotifyStatusUI();
   renderKeywordGroups();
+  renderKeywordGroupBar();
   updateFilterSummary();
 }
 
@@ -1210,35 +1426,14 @@ async function handleFetch(opts = {}) {
 
   try {
     if (currentTab === 'news') {
-      const uniqueNews = [];
-      const seenTitlesMap = new Map();
+      const keywordsToFetch = getKeywordsForFetch(opts);
+      const scopeLabel = opts.groupName
+        ? opts.groupName
+        : (fetchScope === 'all' ? '全グループ' : (activeGroupName || '表示中'));
 
-      for (let i = 0; i < keywords.length; i++) {
-        updateStatusText(`取得中 ${i+1}/${keywords.length}`);
-        if (!silent) setProgress(5 + Math.round(((i) / keywords.length) * 90));
-
-        try {
-          const res = await fetch(`/api/rss?keyword=${encodeURIComponent(keywords[i])}&type=news&exclude=${excludeParam}&count=${fetchCount}`);
-          if (res.ok) {
-            const rawData = await res.json();
-            const items = normalizeItems(rawData);
-            for (const item of items) {
-              const norm = displayTitleForDedup(item.title);
-              if (!seenTitlesMap.has(norm)) {
-                seenTitlesMap.set(norm, item);
-                uniqueNews.push(item);
-              }
-            }
-          }
-        } catch (e) {
-          console.error("Fetch skipped for:", keywords[i]);
-        }
-        await new Promise(r => setTimeout(r, 300));
-      }
-      
-      applyTopicScores(uniqueNews);
-      dataStore.news = uniqueNews;
-      notifyNewArticles(uniqueNews);
+      await fetchKeywordsForList(keywordsToFetch, { silent, label: scopeLabel });
+      refreshNewsDisplayFromCache();
+      notifyNewArticles(dataStore.news);
       if (!silent) setProgress(95);
 
     } else {
@@ -1428,8 +1623,12 @@ function renderTable() {
 }
 
 renderChips();
+renderKeywordGroupBar();
 initMobileFilterSelects();
 saveFavorites();
+if (currentTab === 'news' && activeGroupName && isGroupCacheComplete(activeGroupName)) {
+  refreshNewsDisplayFromCache();
+}
 switchTab(currentTab);
 scheduleAutoRefresh();
 updateNotifyStatusUI();
