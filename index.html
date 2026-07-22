@@ -237,7 +237,7 @@
 <body>
 
 <header>
-  <h1>📰 News Dashboard <span class="version">v8.8</span></h1>
+  <h1>📰 News Dashboard <span class="version">v8.9</span></h1>
 </header>
 
 <main>
@@ -287,13 +287,14 @@
       <div class="input-group" style="margin-bottom:8px;">
         <select id="kw-group-sel" class="sort-select" style="flex:1;"></select>
         <button type="button" class="btn btn-secondary" onclick="loadKeywordGroupForEdit()">編集用に読み込み</button>
+        <button type="button" class="btn btn-secondary" onclick="startNewKeywordGroup()" title="空のキーワード一覧から新規グループを作成">新規</button>
       </div>
       <div class="input-group">
         <input type="text" id="kw-group-name" placeholder="グループ名（例: 政治, 地元）" inputmode="text" autocomplete="off" />
         <button type="button" class="btn btn-secondary" onclick="saveKeywordGroup()">保存</button>
         <button type="button" class="btn-ghost" onclick="deleteKeywordGroup()" title="選択中グループを削除">削除</button>
       </div>
-      <p class="settings-hint">いまのキーワード一覧を名前付きで保存します。表示の切り替えは表画面上のグループボタンから行えます。</p>
+      <p class="settings-hint">「新規」で空の一覧から作成するか、いまの一覧を名前付きで保存します。追加・削除はアクティブなグループに自動反映されます。表示の切り替えは表画面上のグループボタンから行えます。</p>
     </div>
 
     <div id="ng-section" class="settings-section">
@@ -784,6 +785,39 @@ function saveKeywordGroups() {
   updateFilterSummary();
 }
 
+/** Keep the active group's snapshot in sync with the working keyword list. */
+function syncActiveGroupFromWorking() {
+  if (!activeGroupName) return false;
+  const group = keywordGroups.find(g => g.name === activeGroupName);
+  if (!group) return false;
+  group.keywords = [...keywords];
+  group.notify = [...notifyKeywords];
+  localStorage.setItem('myKeywordGroups', JSON.stringify(keywordGroups));
+  return true;
+}
+
+function startNewKeywordGroup() {
+  if (activeGroupName) syncActiveGroupFromWorking();
+  keywords = [];
+  notifyKeywords = [];
+  seededNotifyKeywords = new Set();
+  activeGroupName = '';
+  saveData();
+  saveKeywordGroups();
+  renderChips();
+  setSelectedKeywordFilter('all', { skipRender: true });
+  if (currentTab === 'news') {
+    refreshNewsDisplayFromCache();
+    renderTable();
+  }
+  const nameInp = document.getElementById('kw-group-name');
+  if (nameInp) {
+    nameInp.value = '';
+    nameInp.focus();
+  }
+  updateStatusText('新規グループ用にキーワードをクリア。名前を付けて保存してください');
+}
+
 function saveKeywordGroup() {
   const nameInp = document.getElementById('kw-group-name');
   const name = (nameInp?.value || '').trim();
@@ -795,6 +829,8 @@ function saveKeywordGroup() {
     updateStatusText('キーワードが空です');
     return;
   }
+  // Persist the previous active group before attaching this working list to a new name.
+  if (activeGroupName && activeGroupName !== name) syncActiveGroupFromWorking();
   const existing = keywordGroups.find(g => g.name === name);
   if (existing) {
     existing.keywords = [...keywords];
@@ -812,6 +848,9 @@ function saveKeywordGroup() {
 async function switchToGroup(name, opts = {}) {
   const group = keywordGroups.find(g => g.name === name);
   if (!group) return;
+
+  // Persist edits on the current group before loading another snapshot.
+  if (activeGroupName && activeGroupName !== name) syncActiveGroupFromWorking();
 
   keywords = [...group.keywords];
   notifyKeywords = (group.notify || []).filter(k => keywords.includes(k));
@@ -848,10 +887,13 @@ function loadKeywordGroupForEdit() {
   }
   const group = keywordGroups.find(g => g.name === name);
   if (!group) return;
+  if (activeGroupName && activeGroupName !== name) syncActiveGroupFromWorking();
   keywords = [...group.keywords];
   notifyKeywords = (group.notify || []).filter(k => keywords.includes(k));
   seededNotifyKeywords = new Set([...seededNotifyKeywords].filter(k => notifyKeywords.includes(k)));
+  activeGroupName = name;
   saveData();
+  saveKeywordGroups();
   renderChips();
   updateStatusText(`「${name}」を編集用に読み込み`);
 }
@@ -865,7 +907,15 @@ function deleteKeywordGroup() {
   }
   keywordGroups = keywordGroups.filter(g => g.name !== name);
   const wasActive = activeGroupName === name;
-  if (wasActive) activeGroupName = '';
+  if (wasActive) {
+    activeGroupName = '';
+    // Clear leftover working keywords so they don't get re-saved into a new group.
+    keywords = [];
+    notifyKeywords = [];
+    seededNotifyKeywords = new Set();
+    saveData();
+    renderChips();
+  }
   saveKeywordGroups();
   renderKeywordGroupBar();
   if (wasActive && currentTab === 'news') {
@@ -1086,6 +1136,7 @@ function toggleNotifyKeyword(i) {
     seededNotifyKeywords.delete(kw);
     saveKnownNotifyLinks();
   }
+  syncActiveGroupFromWorking();
   saveData();
   renderChips();
 }
@@ -1239,7 +1290,10 @@ function addItem(type) {
   if (!inp) return;
   const v = inp.value.trim();
   if (!v) return;
-  if (type === 'kw' && !keywords.includes(v)) keywords.push(v);
+  if (type === 'kw' && !keywords.includes(v)) {
+    keywords.push(v);
+    syncActiveGroupFromWorking();
+  }
   if (type === 'ng' && !ngWords.includes(v)) ngWords.push(v);
   saveData();
   renderChips();
@@ -1253,6 +1307,7 @@ function removeItem(type, i) {
     notifyKeywords = notifyKeywords.filter(k => k !== removed);
     seededNotifyKeywords.delete(removed);
     saveKnownNotifyLinks();
+    syncActiveGroupFromWorking();
   }
   if (type === 'ng') ngWords.splice(i, 1);
   saveData();
