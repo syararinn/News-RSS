@@ -237,7 +237,7 @@
 <body>
 
 <header>
-  <h1>📰 News Dashboard <span class="version">v8.9</span></h1>
+  <h1>📰 News Dashboard <span class="version">v8.10</span></h1>
 </header>
 
 <main>
@@ -509,6 +509,7 @@ let currentTab = 'news';
 let isFetching = false;
 let autoRefreshTimer = null;
 let lastFetchAt = null;
+let lastNewsFetchEmpty = false;
 let settingsOpen = false;
 
 function syncTwinSelect(primaryId, twinId, value) {
@@ -735,11 +736,13 @@ function refreshNewsDisplayFromCache() {
 async function fetchKeywordsForList(keywordList, opts = {}) {
   const silent = !!opts.silent;
   const uniqueList = [...new Set(keywordList.filter(Boolean))];
-  if (!uniqueList.length) return;
+  if (!uniqueList.length) return { fetchedAny: false, failed: 0, total: 0 };
 
   const excludeParam = encodeURIComponent(ngWords.join(','));
   const fetchCount = document.getElementById('count-sel').value;
   const label = opts.label || '';
+  let fetchedAny = false;
+  let failed = 0;
 
   for (let i = 0; i < uniqueList.length; i++) {
     const kw = uniqueList[i];
@@ -749,16 +752,23 @@ async function fetchKeywordsForList(keywordList, opts = {}) {
 
     try {
       const res = await fetch(`/api/rss?keyword=${encodeURIComponent(kw)}&type=news&exclude=${excludeParam}&count=${fetchCount}`);
-      if (res.ok) {
+      if (!res.ok) {
+        failed++;
+        console.error('Fetch failed for:', kw, res.status);
+      } else {
         const rawData = await res.json();
         const items = normalizeItems(rawData);
         articleCacheByKeyword.set(kw, { items, fetchedAt: new Date() });
+        if (items.length) fetchedAny = true;
+        else failed++;
       }
     } catch (e) {
+      failed++;
       console.error('Fetch skipped for:', kw);
     }
     await new Promise(r => setTimeout(r, 300));
   }
+  return { fetchedAny, failed, total: uniqueList.length };
 }
 
 function renderKeywordGroups() {
@@ -1486,8 +1496,9 @@ async function handleFetch(opts = {}) {
         ? opts.groupName
         : (fetchScope === 'all' ? '全グループ' : (activeGroupName || '表示中'));
 
-      await fetchKeywordsForList(keywordsToFetch, { silent, label: scopeLabel });
+      const fetchResult = await fetchKeywordsForList(keywordsToFetch, { silent, label: scopeLabel });
       refreshNewsDisplayFromCache();
+      lastNewsFetchEmpty = !!(fetchResult && fetchResult.total && !fetchResult.fetchedAny);
       notifyNewArticles(dataStore.news);
       if (!silent) setProgress(95);
 
@@ -1507,7 +1518,7 @@ async function handleFetch(opts = {}) {
     }
 
     lastFetchAt = new Date();
-    updateStatusText('完了');
+    updateStatusText(lastNewsFetchEmpty && currentTab === 'news' ? '⚠️ 記事を取得できませんでした' : '完了');
     if (!silent) {
       setProgress(100);
       setTimeout(() => setProgress(0), 600);
@@ -1541,7 +1552,9 @@ function renderTable() {
   if (!displayData || displayData.length === 0) {
     const emptyMsg = currentTab === 'fav'
       ? 'お気に入りはまだありません。記事左の★で追加できます'
-      : '下の「取得」を押してください';
+      : (currentTab === 'news' && lastNewsFetchEmpty)
+        ? '記事を取得できませんでした。再取得してください'
+        : '下の「取得」を押してください';
     if (!document.getElementById('results-info') || document.getElementById('results-info').textContent !== '通信が混み合っています。少し待って再取得してください。') {
        document.getElementById('results').innerHTML = `<div id="results-info">${emptyMsg}</div>`;
     }
