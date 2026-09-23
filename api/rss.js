@@ -7,9 +7,10 @@ const REQUEST_TIMEOUT_MS = 3800;
 const NEWS_TIMEOUT_MS = 8000;
 const USER_AGENT = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36 NewsDashboard/1.0';
 
-// keepAlive: true だと、同一ホストへの同時リクエスト（主要タブのNHK3本・Yahoo2本・読売2本など）が
-// ソケットを共有し、いずれかがタイムアウトで破棄された際に関数全体がクラッシュすることがあったため無効化
-const httpsAgent = new https.Agent({ family: 4, keepAlive: false });
+// 1つの https.Agent を全フィードで共有すると、異なるホストへ同時に取りに行く主要・ブログタブだけが
+// 本番で FUNCTION_INVOCATION_FAILED になった（同一ホストへの同時取得や単独取得では起きない）。
+// Agent の内部状態を共有させないため、リクエストごとに使い捨てる。family:4 はIPv6での遅延回避
+const newHttpsAgent = () => new https.Agent({ family: 4, keepAlive: false });
 
 // axios(follow-redirects)は、タイムアウトで中断した直後にソケットが二度目の'error'を出すことがあり、
 // それを誰も listen していないと Node がプロセスごと落とす（レスポンスは既に await 側の catch で処理済みでも発生する）。
@@ -100,7 +101,7 @@ function createHandler(httpClient = axios, options = {}) {
 
   return async function handler(req, res) {
     // 一時デバッグ用: 本番に反映されているコードのビルドを外形から確認するためのマーカー。原因が判明したら削除する
-    try { res.setHeader('X-Debug-Build', 'diag-22539b2-plus1'); } catch { /* noop */ }
+    try { res.setHeader('X-Debug-Build', 'diag-agent-per-request'); } catch { /* noop */ }
     const { keyword = '', type = '', exclude = '', count = '20' } = req.query;
     const parsedCount = parseInt(count, 10);
     const limit = Math.min(Math.max(Number.isFinite(parsedCount) ? parsedCount : 20, 1), MAX_COUNT);
@@ -119,7 +120,7 @@ function createHandler(httpClient = axios, options = {}) {
             'User-Agent': USER_AGENT,
             Accept: 'application/rss+xml, application/xml, text/xml, */*'
           },
-          httpsAgent,
+          httpsAgent: newHttpsAgent(),
           maxRedirects: 5
         });
         const xml = decodeBuffer(Buffer.from(response.data || []), response.headers && response.headers['content-type']);
