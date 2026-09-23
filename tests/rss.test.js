@@ -1,6 +1,7 @@
 const { test } = require('node:test');
 const assert = require('node:assert/strict');
 const fs = require('node:fs');
+const http = require('node:http');
 const path = require('node:path');
 const { createHandler } = require('../api/rss.js');
 
@@ -135,6 +136,28 @@ test('ブログタブ：はてな・noteを同時取得できる', async () => {
   await handler({ query: { type: 'social', count: '20' } }, res);
   assert.equal(res.statusCode, 200);
   assert.equal(res.body.length, 2);
+});
+
+test('日本語のフィード名が失敗しても診断ヘッダーはASCIIだけになる', async () => {
+  // 非ASCIIのヘッダー値は Node が ERR_INVALID_CHAR を投げ、関数ごと落ちて本番が500になっていた
+  const client = {
+    async get() {
+      const err = new Error('forbidden');
+      err.code = 'ERR_BAD_REQUEST';
+      throw err;
+    }
+  };
+  const handler = createHandler(client, { defaultTimeoutMs: 40 });
+  const res = mockRes();
+  await handler({ query: { type: 'major', count: '5' } }, res);
+  assert.equal(res.statusCode, 200);
+  const diag = res.headers['X-Rss-Diagnostics'];
+  assert.ok(diag, '診断ヘッダーが出ること');
+  assert.doesNotMatch(diag, /[^\t\x20-\x7e]/, '非ASCIIを含まないこと');
+  assert.match(diag, /ERR_BAD_REQUEST/);
+  // 実際の http.ServerResponse でも ERR_INVALID_CHAR にならないことを確認する
+  const realRes = new http.ServerResponse({ method: 'GET' });
+  assert.doesNotThrow(() => realRes.setHeader('X-Rss-Diagnostics', diag));
 });
 
 test('想定外の例外が起きても500にせず空配列を返す', async () => {

@@ -7,21 +7,11 @@ const REQUEST_TIMEOUT_MS = 3800;
 const NEWS_TIMEOUT_MS = 8000;
 const USER_AGENT = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36 NewsDashboard/1.0';
 
-// 1つの https.Agent を全フィードで共有すると、異なるホストへ同時に取りに行く主要・ブログタブだけが
-// 本番で FUNCTION_INVOCATION_FAILED になった（同一ホストへの同時取得や単独取得では起きない）。
-// Agent の内部状態を共有させないため、リクエストごとに使い捨てる。family:4 はIPv6での遅延回避
-const newHttpsAgent = () => new https.Agent({ family: 4, keepAlive: false });
+const httpsAgent = new https.Agent({ family: 4, keepAlive: true });
 
-// axios(follow-redirects)は、タイムアウトで中断した直後にソケットが二度目の'error'を出すことがあり、
-// それを誰も listen していないと Node がプロセスごと落とす（レスポンスは既に await 側の catch で処理済みでも発生する）。
-// 主要・ブログタブは同時に複数フィード（一部はリダイレクトあり）を取りに行くため、この経路で本番が
-// FUNCTION_INVOCATION_FAILED になっていた。ここで拾って、関数のクラッシュだけは防ぐ
-process.on('uncaughtException', (err) => {
-  console.error('[api/rss] uncaughtException', err && (err.stack || err.message || err));
-});
-process.on('unhandledRejection', (err) => {
-  console.error('[api/rss] unhandledRejection', err && (err.stack || err.message || err));
-});
+// HTTPヘッダーの値に非ASCII（「読売」「はてな」等のフィード名）が入ると Node が ERR_INVALID_CHAR を投げ、
+// 関数ごと落ちて 500 になる。診断ヘッダーは必ずここを通してASCIIに落とす
+const toHeaderSafe = (value) => String(value).replace(/[^\t\x20-\x7e]/g, '.');
 
 const normalizeEncoding = (encoding = 'utf-8') => {
   const enc = encoding.trim().toLowerCase().replace(/_/g, '-');
@@ -100,8 +90,6 @@ function createHandler(httpClient = axios, options = {}) {
   const defaultTimeoutMs = options.defaultTimeoutMs ?? REQUEST_TIMEOUT_MS;
 
   return async function handler(req, res) {
-    // 一時デバッグ用: 本番に反映されているコードのビルドを外形から確認するためのマーカー。原因が判明したら削除する
-    try { res.setHeader('X-Debug-Build', 'diag-agent-per-request'); } catch { /* noop */ }
     const { keyword = '', type = '', exclude = '', count = '20' } = req.query;
     const parsedCount = parseInt(count, 10);
     const limit = Math.min(Math.max(Number.isFinite(parsedCount) ? parsedCount : 20, 1), MAX_COUNT);
@@ -120,7 +108,7 @@ function createHandler(httpClient = axios, options = {}) {
             'User-Agent': USER_AGENT,
             Accept: 'application/rss+xml, application/xml, text/xml, */*'
           },
-          httpsAgent: newHttpsAgent(),
+          httpsAgent,
           maxRedirects: 5
         });
         const xml = decodeBuffer(Buffer.from(response.data || []), response.headers && response.headers['content-type']);
@@ -157,50 +145,51 @@ function createHandler(httpClient = axios, options = {}) {
     };
 
     try {
-    const feeds = [];
+    const tasks = [];
     if (type === 'news' && keyword) {
-      feeds.push([
+      tasks.push(fetchAndParse(
         `https://news.google.com/rss/search?q=${encodeURIComponent(keyword)}&hl=ja&gl=JP&ceid=JP:ja`,
-        keyword, 'Googleニュース', '',
+        keyword,
+        'Googleニュース',
+        '',
         { source: 'Googleニュース', extractPublisher: true, timeout: newsTimeoutMs }
-      ]);
+      ));
       // Vercel 等のデータセンターIPから Google ニュース RSS がタイムアウトしても一覧が空にならないようにする
-      feeds.push([
+      tasks.push(fetchAndParse(
         `https://www.bing.com/news/search?q=${encodeURIComponent(keyword)}&format=rss&setmkt=ja-JP&setlang=ja`,
-        keyword, 'Bingニュース', '',
+        keyword,
+        'Bingニュース',
+        '',
         { source: 'Bingニュース', extractPublisher: true, timeout: newsTimeoutMs }
-      ]);
+      ));
     } else if (type === 'major') {
-      feeds.push(['https://news.yahoo.co.jp/rss/topics/top-picks.xml', 'Yahoo', '主要', '', { source: 'Yahoo' }]);
-      feeds.push(['https://news.google.com/rss?hl=ja&gl=JP&ceid=JP:ja', 'Google', '主要', '', { source: 'Google', extractPublisher: true }]);
-      feeds.push(['https://www.nhk.or.jp/rss/news/cat0.xml', 'NHK', '主要', '', { source: 'NHK' }]);
-      feeds.push(['https://news.google.com/rss/search?q=%E5%A4%A9%E6%B0%97+%E6%B0%97%E8%B1%A1&hl=ja&gl=JP&ceid=JP:ja', 'Google', '天気', '天気', { source: 'Google', extractPublisher: true }]);
-      feeds.push(['https://news.yahoo.co.jp/rss/categories/domestic.xml', 'Yahoo', '国内', '', { source: 'Yahoo' }]);
-      feeds.push(['https://www.nhk.or.jp/rss/news/cat1.xml', 'NHK', '社会', '社会', { source: 'NHK' }]);
-      feeds.push(['https://www.nhk.or.jp/rss/news/cat4.xml', 'NHK', '政治', '政治', { source: 'NHK' }]);
-      feeds.push(['https://www.yomiuri.co.jp/rss/news/politics.rdf', '読売', '政治', '政治', { source: '読売' }]);
-      feeds.push(['https://www.yomiuri.co.jp/rss/news/society.rdf', '読売', '社会', '社会', { source: '読売' }]);
+      tasks.push(fetchAndParse('https://news.yahoo.co.jp/rss/topics/top-picks.xml', 'Yahoo', '主要', '', { source: 'Yahoo' }));
+      tasks.push(fetchAndParse('https://news.google.com/rss?hl=ja&gl=JP&ceid=JP:ja', 'Google', '主要', '', { source: 'Google', extractPublisher: true }));
+      tasks.push(fetchAndParse('https://www.nhk.or.jp/rss/news/cat0.xml', 'NHK', '主要', '', { source: 'NHK' }));
+      tasks.push(fetchAndParse('https://news.google.com/rss/search?q=%E5%A4%A9%E6%B0%97+%E6%B0%97%E8%B1%A1&hl=ja&gl=JP&ceid=JP:ja', 'Google', '天気', '天気', { source: 'Google', extractPublisher: true }));
+      tasks.push(fetchAndParse('https://news.yahoo.co.jp/rss/categories/domestic.xml', 'Yahoo', '国内', '', { source: 'Yahoo' }));
+      tasks.push(fetchAndParse('https://www.nhk.or.jp/rss/news/cat1.xml', 'NHK', '社会', '社会', { source: 'NHK' }));
+      tasks.push(fetchAndParse('https://www.nhk.or.jp/rss/news/cat4.xml', 'NHK', '政治', '政治', { source: 'NHK' }));
+      tasks.push(fetchAndParse('https://www.yomiuri.co.jp/rss/news/politics.rdf', '読売', '政治', '政治', { source: '読売' }));
+      tasks.push(fetchAndParse('https://www.yomiuri.co.jp/rss/news/society.rdf', '読売', '社会', '社会', { source: '読売' }));
     } else if (type === 'social') {
       const hatenaQ = keyword || '注目';
       const noteQ = keyword || 'ニュース';
-      feeds.push([
+      tasks.push(fetchAndParse(
         `https://b.hatena.ne.jp/search/tag?q=${encodeURIComponent(hatenaQ)}&mode=rss`,
-        hatenaQ, 'ブログ', '', { source: 'はてな' }
-      ]);
-      feeds.push([
+        hatenaQ,
+        'ブログ',
+        '',
+        { source: 'はてな' }
+      ));
+      tasks.push(fetchAndParse(
         `https://note.com/hashtag/${encodeURIComponent(noteQ)}/rss`,
-        noteQ, 'ブログ', '', { source: 'note' }
-      ]);
+        noteQ,
+        'ブログ',
+        '',
+        { source: 'note' }
+      ));
     }
-
-    // 一時デバッグ用: ?only=<source名の一部> で該当フィードだけに絞る。原因が判明したら削除する
-    const onlyFilter = String(req.query.only || '').trim();
-    const filteredFeeds = onlyFilter
-      ? feeds.filter(f => (f[4] && f[4].source || '').includes(onlyFilter))
-      : feeds;
-    res.setHeader('X-Debug-Feeds', filteredFeeds.map(f => (f[4] && f[4].source) || '').join(',') || '(none)');
-
-    const tasks = filteredFeeds.map(f => fetchAndParse(...f));
 
     const results = await Promise.allSettled(tasks);
     let merged = results.flatMap(r => (r.status === 'fulfilled' ? r.value : []));
@@ -218,7 +207,7 @@ function createHandler(httpClient = axios, options = {}) {
     res.setHeader('Access-Control-Allow-Origin', '*');
     res.setHeader('Cache-Control', merged.length ? 'public, max-age=60' : 'no-store');
     if (feedErrors.length) {
-      res.setHeader('X-Rss-Diagnostics', feedErrors.join('; ').slice(0, 500));
+      res.setHeader('X-Rss-Diagnostics', toHeaderSafe(feedErrors.join('; ')).slice(0, 500));
       res.setHeader('Access-Control-Expose-Headers', 'X-Rss-Diagnostics');
     }
     res.status(200).json(merged.slice(0, limit));
@@ -229,7 +218,7 @@ function createHandler(httpClient = axios, options = {}) {
       res.setHeader('Content-Type', 'application/json; charset=utf-8');
       res.setHeader('Access-Control-Allow-Origin', '*');
       res.setHeader('Cache-Control', 'no-store');
-      res.setHeader('X-Rss-Diagnostics', feedErrors.join('; ').slice(0, 500));
+      res.setHeader('X-Rss-Diagnostics', toHeaderSafe(feedErrors.join('; ')).slice(0, 500));
       res.setHeader('Access-Control-Expose-Headers', 'X-Rss-Diagnostics');
       res.status(200).json([]);
     }
