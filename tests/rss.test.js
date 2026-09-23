@@ -97,6 +97,69 @@ test('1件も取れないときは no-store（空結果をCDNに残さない）'
   assert.equal(res.headers['Access-Control-Allow-Origin'], '*');
 });
 
+test('主要タブ：同一ホストへの同時取得（NHK3本）でも全件返る', async () => {
+  const xmlFor = (label) => `<?xml version="1.0" encoding="utf-8"?>
+<rss version="2.0"><channel>
+<item>
+  <title>${label}の記事</title>
+  <link>https://example.com/${label}</link>
+  <pubDate>Thu, 17 Sep 2026 01:00:00 GMT</pubDate>
+</item>
+</channel></rss>`;
+  const client = {
+    async get(url) {
+      const label = String(url).replace(/[^a-z0-9]/gi, '');
+      return { data: Buffer.from(xmlFor(label)), headers: { 'content-type': 'application/xml' } };
+    }
+  };
+  const handler = createHandler(client, { defaultTimeoutMs: 40 });
+  const res = mockRes();
+  await handler({ query: { type: 'major', count: '20' } }, res);
+  assert.equal(res.statusCode, 200);
+  assert.equal(res.body.length, 9);
+});
+
+test('ブログタブ：はてな・noteを同時取得できる', async () => {
+  const client = {
+    async get(url) {
+      const source = String(url).includes('hatena') ? 'はてな' : 'note';
+      const xml = `<?xml version="1.0" encoding="utf-8"?>
+<rss version="2.0"><channel>
+<item><title>${source}の記事</title><link>https://example.com/${source}</link><pubDate>Thu, 17 Sep 2026 01:00:00 GMT</pubDate></item>
+</channel></rss>`;
+      return { data: Buffer.from(xml), headers: { 'content-type': 'application/xml' } };
+    }
+  };
+  const handler = createHandler(client, { defaultTimeoutMs: 40 });
+  const res = mockRes();
+  await handler({ query: { type: 'social', count: '20' } }, res);
+  assert.equal(res.statusCode, 200);
+  assert.equal(res.body.length, 2);
+});
+
+test('想定外の例外が起きても500にせず空配列を返す', async () => {
+  const client = {
+    async get() {
+      return { data: null, headers: null };
+    }
+  };
+  const handler = createHandler(client, { defaultTimeoutMs: 40 });
+  const res = mockRes();
+  // ngWords フィルタで item.title.includes を呼ぶ前提が崩れるケースを模して
+  // handler 内の後処理が例外を投げても catch されることを確認する
+  const originalSort = Array.prototype.sort;
+  Array.prototype.sort = function () { throw new Error('boom'); };
+  try {
+    await handler({ query: { type: 'major', count: '20' } }, res);
+  } finally {
+    Array.prototype.sort = originalSort;
+  }
+  assert.equal(res.statusCode, 200);
+  assert.deepEqual(res.body, []);
+  assert.equal(res.headers['Cache-Control'], 'no-store');
+  assert.match(res.headers['X-Rss-Diagnostics'] || '', /handler:boom/);
+});
+
 test('github.io の画面は本番 API を呼び、それ以外は同一オリジン', () => {
   const html = fs.readFileSync(path.join(__dirname, '..', 'index.html'), 'utf8');
   assert.match(html, /function rssApiOrigin\(hostname\)/);

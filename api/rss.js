@@ -7,7 +7,9 @@ const REQUEST_TIMEOUT_MS = 3800;
 const NEWS_TIMEOUT_MS = 8000;
 const USER_AGENT = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36 NewsDashboard/1.0';
 
-const httpsAgent = new https.Agent({ family: 4, keepAlive: true });
+// keepAlive: true だと、同一ホストへの同時リクエスト（主要タブのNHK3本・Yahoo2本・読売2本など）が
+// ソケットを共有し、いずれかがタイムアウトで破棄された際に関数全体がクラッシュすることがあったため無効化
+const httpsAgent = new https.Agent({ family: 4, keepAlive: false });
 
 const normalizeEncoding = (encoding = 'utf-8') => {
   const enc = encoding.trim().toLowerCase().replace(/_/g, '-');
@@ -140,6 +142,7 @@ function createHandler(httpClient = axios, options = {}) {
       }
     };
 
+    try {
     const tasks = [];
     if (type === 'news' && keyword) {
       tasks.push(fetchAndParse(
@@ -206,6 +209,17 @@ function createHandler(httpClient = axios, options = {}) {
       res.setHeader('Access-Control-Expose-Headers', 'X-Rss-Diagnostics');
     }
     res.status(200).json(merged.slice(0, limit));
+    } catch (e) {
+      // 個別フィードの失敗は fetchAndParse 内で握っているため、ここに来るのは想定外のバグ。
+      // 500 で関数全体をクラッシュさせず、空配列を返して画面側の「取得できませんでした」に落とす
+      feedErrors.push(`handler:${e.code || e.message || 'unexpected_error'}`);
+      res.setHeader('Content-Type', 'application/json; charset=utf-8');
+      res.setHeader('Access-Control-Allow-Origin', '*');
+      res.setHeader('Cache-Control', 'no-store');
+      res.setHeader('X-Rss-Diagnostics', feedErrors.join('; ').slice(0, 500));
+      res.setHeader('Access-Control-Expose-Headers', 'X-Rss-Diagnostics');
+      res.status(200).json([]);
+    }
   };
 }
 
