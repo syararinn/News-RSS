@@ -99,6 +99,8 @@ function createHandler(httpClient = axios, options = {}) {
   const defaultTimeoutMs = options.defaultTimeoutMs ?? REQUEST_TIMEOUT_MS;
 
   return async function handler(req, res) {
+    // 一時デバッグ用: 本番に反映されているコードのビルドを外形から確認するためのマーカー。原因が判明したら削除する
+    try { res.setHeader('X-Debug-Build', 'diag-22539b2-plus1'); } catch { /* noop */ }
     const { keyword = '', type = '', exclude = '', count = '20' } = req.query;
     const parsedCount = parseInt(count, 10);
     const limit = Math.min(Math.max(Number.isFinite(parsedCount) ? parsedCount : 20, 1), MAX_COUNT);
@@ -154,51 +156,50 @@ function createHandler(httpClient = axios, options = {}) {
     };
 
     try {
-    const tasks = [];
+    const feeds = [];
     if (type === 'news' && keyword) {
-      tasks.push(fetchAndParse(
+      feeds.push([
         `https://news.google.com/rss/search?q=${encodeURIComponent(keyword)}&hl=ja&gl=JP&ceid=JP:ja`,
-        keyword,
-        'Googleニュース',
-        '',
+        keyword, 'Googleニュース', '',
         { source: 'Googleニュース', extractPublisher: true, timeout: newsTimeoutMs }
-      ));
+      ]);
       // Vercel 等のデータセンターIPから Google ニュース RSS がタイムアウトしても一覧が空にならないようにする
-      tasks.push(fetchAndParse(
+      feeds.push([
         `https://www.bing.com/news/search?q=${encodeURIComponent(keyword)}&format=rss&setmkt=ja-JP&setlang=ja`,
-        keyword,
-        'Bingニュース',
-        '',
+        keyword, 'Bingニュース', '',
         { source: 'Bingニュース', extractPublisher: true, timeout: newsTimeoutMs }
-      ));
+      ]);
     } else if (type === 'major') {
-      tasks.push(fetchAndParse('https://news.yahoo.co.jp/rss/topics/top-picks.xml', 'Yahoo', '主要', '', { source: 'Yahoo' }));
-      tasks.push(fetchAndParse('https://news.google.com/rss?hl=ja&gl=JP&ceid=JP:ja', 'Google', '主要', '', { source: 'Google', extractPublisher: true }));
-      tasks.push(fetchAndParse('https://www.nhk.or.jp/rss/news/cat0.xml', 'NHK', '主要', '', { source: 'NHK' }));
-      tasks.push(fetchAndParse('https://news.google.com/rss/search?q=%E5%A4%A9%E6%B0%97+%E6%B0%97%E8%B1%A1&hl=ja&gl=JP&ceid=JP:ja', 'Google', '天気', '天気', { source: 'Google', extractPublisher: true }));
-      tasks.push(fetchAndParse('https://news.yahoo.co.jp/rss/categories/domestic.xml', 'Yahoo', '国内', '', { source: 'Yahoo' }));
-      tasks.push(fetchAndParse('https://www.nhk.or.jp/rss/news/cat1.xml', 'NHK', '社会', '社会', { source: 'NHK' }));
-      tasks.push(fetchAndParse('https://www.nhk.or.jp/rss/news/cat4.xml', 'NHK', '政治', '政治', { source: 'NHK' }));
-      tasks.push(fetchAndParse('https://www.yomiuri.co.jp/rss/news/politics.rdf', '読売', '政治', '政治', { source: '読売' }));
-      tasks.push(fetchAndParse('https://www.yomiuri.co.jp/rss/news/society.rdf', '読売', '社会', '社会', { source: '読売' }));
+      feeds.push(['https://news.yahoo.co.jp/rss/topics/top-picks.xml', 'Yahoo', '主要', '', { source: 'Yahoo' }]);
+      feeds.push(['https://news.google.com/rss?hl=ja&gl=JP&ceid=JP:ja', 'Google', '主要', '', { source: 'Google', extractPublisher: true }]);
+      feeds.push(['https://www.nhk.or.jp/rss/news/cat0.xml', 'NHK', '主要', '', { source: 'NHK' }]);
+      feeds.push(['https://news.google.com/rss/search?q=%E5%A4%A9%E6%B0%97+%E6%B0%97%E8%B1%A1&hl=ja&gl=JP&ceid=JP:ja', 'Google', '天気', '天気', { source: 'Google', extractPublisher: true }]);
+      feeds.push(['https://news.yahoo.co.jp/rss/categories/domestic.xml', 'Yahoo', '国内', '', { source: 'Yahoo' }]);
+      feeds.push(['https://www.nhk.or.jp/rss/news/cat1.xml', 'NHK', '社会', '社会', { source: 'NHK' }]);
+      feeds.push(['https://www.nhk.or.jp/rss/news/cat4.xml', 'NHK', '政治', '政治', { source: 'NHK' }]);
+      feeds.push(['https://www.yomiuri.co.jp/rss/news/politics.rdf', '読売', '政治', '政治', { source: '読売' }]);
+      feeds.push(['https://www.yomiuri.co.jp/rss/news/society.rdf', '読売', '社会', '社会', { source: '読売' }]);
     } else if (type === 'social') {
       const hatenaQ = keyword || '注目';
       const noteQ = keyword || 'ニュース';
-      tasks.push(fetchAndParse(
+      feeds.push([
         `https://b.hatena.ne.jp/search/tag?q=${encodeURIComponent(hatenaQ)}&mode=rss`,
-        hatenaQ,
-        'ブログ',
-        '',
-        { source: 'はてな' }
-      ));
-      tasks.push(fetchAndParse(
+        hatenaQ, 'ブログ', '', { source: 'はてな' }
+      ]);
+      feeds.push([
         `https://note.com/hashtag/${encodeURIComponent(noteQ)}/rss`,
-        noteQ,
-        'ブログ',
-        '',
-        { source: 'note' }
-      ));
+        noteQ, 'ブログ', '', { source: 'note' }
+      ]);
     }
+
+    // 一時デバッグ用: ?only=<source名の一部> で該当フィードだけに絞る。原因が判明したら削除する
+    const onlyFilter = String(req.query.only || '').trim();
+    const filteredFeeds = onlyFilter
+      ? feeds.filter(f => (f[4] && f[4].source || '').includes(onlyFilter))
+      : feeds;
+    res.setHeader('X-Debug-Feeds', filteredFeeds.map(f => (f[4] && f[4].source) || '').join(',') || '(none)');
+
+    const tasks = filteredFeeds.map(f => fetchAndParse(...f));
 
     const results = await Promise.allSettled(tasks);
     let merged = results.flatMap(r => (r.status === 'fulfilled' ? r.value : []));
