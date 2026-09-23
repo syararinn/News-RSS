@@ -7,7 +7,7 @@
 
 読者：このリポジトリを初めて開いた技術者（次に触るエージェント、将来の自分を含む）。
 
-最終更新: 2026-09-17（画面のバージョン表記は v8.10）
+最終更新: 2026-09-23（画面のバージョン表記は v8.11）
 
 ---
 
@@ -52,11 +52,12 @@ index.html   画面と全ロジック（1ファイル、約1,700行）
 api/rss.js   RSS を取りに行くサーバー関数。/api/rss?keyword=...&type=news|major|social&exclude=...&count=...
 ```
 
-画面は `fetch('/api/rss?...')` で関数を呼びます。関数は `module.exports = async (req, res)` の形で、
+画面は `rssApiUrl(...)` で `/api/rss?...` を呼びます。関数は `module.exports = async (req, res)` の形で、
 `res.status(200).json(...)` を返す **Vercel の Serverless Functions と同じ形式**です。
 履歴上、2026-05-08〜13 は Netlify Functions（`netlify/functions/rss.js`）で動かし、
-2026-05-13 に `api/` 形式へ移しています。**配備先の設定ファイル（`vercel.json` など）はリポジトリに無く、
-本番 URL も書かれていません。** 配備先は Vercel と推定していますが未確認です。
+2026-05-13 に `api/` 形式へ移しています。本番は `https://news-rss-brown.vercel.app` です（2026-09-17 に到達確認）。
+GitHub Pages（`https://syararinn.github.io/News-RSS/`）は同じ `index.html` を配信しますが、API は動きません。
+画面はホスト名が `.github.io` のときだけ、本番の `/api/rss` を直接呼びます。応答には `Access-Control-Allow-Origin: *` を付けています。
 
 ### ローカルで動かす
 
@@ -66,7 +67,7 @@ npx vercel dev              # Vercel CLI があれば。/ と /api/rss の両方
 ```
 
 Vercel CLI が無い場合は、`api/rss.js` を Express などで `/api/rss` に載せ、`index.html` を同じオリジンから配信すれば動きます
-（画面は相対パス `/api/rss` を呼ぶため、別オリジンにすると CORS で失敗します）。
+（`.github.io` 以外では相対パス `/api/rss` を呼びます）。
 
 ### `api/rss.js` の動き
 
@@ -112,7 +113,7 @@ AGENTS.md           Hub 経由で扱うときの同期規則
 
 ## 6. テストと確認方法
 
-- `npm test`：Google タイムアウト時の Bing フォールバック、不正日付、空結果の `no-store` を `node --test` で確認する
+- `npm test`：Google タイムアウト時の Bing フォールバック、不正日付、空結果の `no-store`、GitHub Pages 向けの呼び出し先を `node --test` で確認する
 - `api/rss.js`：`/api/rss?type=major&count=5` を直接開き、JSON が返り、`published` が新しい順で、`source` が入っていることを見る。
   `?type=news&keyword=<語>` でも同様（Google が取れない環境では Bing ニュース RSS が埋める）
 - `index.html`：3タブとも取得できること、キーワードの追加→グループ保存→切替→再読み込み後も残ること、
@@ -134,7 +135,7 @@ AGENTS.md           Hub 経由で扱うときの同期規則
 - 話題順のまとめ方は見出しの文字の重なりだけで、同じ話題でも言い回しが違うと分かれる
 - 設定はブラウザごと。端末間の同期、書き出し、複数人での共有はできない
 - `api/rss.js` に固定の除外語が埋め込まれている。汎用に配るならここを設定に出す必要がある
-- 配備先・本番 URL がリポジトリに無い（§3）。次に触る人は先に確認する
+- 本番 URL は `https://news-rss-brown.vercel.app`。GitHub Pages の URL を開いたときは、画面が本番 API を直接呼ぶ（§3）
 
 ## 9. 主な依存
 

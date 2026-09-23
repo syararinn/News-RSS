@@ -1,5 +1,7 @@
 const { test } = require('node:test');
 const assert = require('node:assert/strict');
+const fs = require('node:fs');
+const path = require('node:path');
 const { createHandler } = require('../api/rss.js');
 
 function mockRes() {
@@ -92,4 +94,15 @@ test('1件も取れないときは no-store（空結果をCDNに残さない）'
   await handler({ query: { type: 'news', keyword: '熊本', count: '5' } }, res);
   assert.deepEqual(res.body, []);
   assert.equal(res.headers['Cache-Control'], 'no-store');
+  assert.equal(res.headers['Access-Control-Allow-Origin'], '*');
+});
+
+test('github.io の画面は本番 API を呼び、それ以外は同一オリジン', () => {
+  const html = fs.readFileSync(path.join(__dirname, '..', 'index.html'), 'utf8');
+  assert.match(html, /function rssApiOrigin\(hostname\)/);
+  assert.equal((html.match(/fetch\(rssApiUrl\(/g) || []).length, 2);
+  const origin = new Function(`${html.match(/function rssApiOrigin\(hostname\) \{[\s\S]*?\n\}/)[0]}; return rssApiOrigin;`)();
+  assert.equal(origin('syararinn.github.io'), 'https://news-rss-brown.vercel.app');
+  assert.equal(origin('news-rss-brown.vercel.app'), '');
+  assert.equal(origin('localhost'), '');
 });

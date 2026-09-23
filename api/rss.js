@@ -198,6 +198,8 @@ function createHandler(httpClient = axios, options = {}) {
     merged.sort((a, b) => new Date(b.published) - new Date(a.published));
 
     res.setHeader('Content-Type', 'application/json; charset=utf-8');
+    // GitHub Pages は静的配信だけで /api/rss が無い。画面が syararinn.github.io からこの関数を直接呼ぶ。
+    res.setHeader('Access-Control-Allow-Origin', '*');
     res.setHeader('Cache-Control', merged.length ? 'public, max-age=60' : 'no-store');
     if (feedErrors.length) {
       res.setHeader('X-Rss-Diagnostics', feedErrors.join('; ').slice(0, 500));

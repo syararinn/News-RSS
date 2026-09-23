@@ -237,7 +237,7 @@
 <body>
 
 <header>
-  <h1>📰 News Dashboard <span class="version">v8.10</span></h1>
+  <h1>📰 News Dashboard <span class="version">v8.11</span></h1>
 </header>
 
 <main>
@@ -510,6 +510,29 @@ let isFetching = false;
 let autoRefreshTimer = null;
 let lastFetchAt = null;
 let lastNewsFetchEmpty = false;
+let newsFetchEmptyMessage = '記事を取得できませんでした。再取得してください';
+
+/** GitHub Pages は同じ画面を出すが API は動かない。そのときだけ本番の関数を呼ぶ。 */
+function rssApiOrigin(hostname) {
+  return String(hostname || '').endsWith('.github.io')
+    ? 'https://news-rss-brown.vercel.app'
+    : '';
+}
+
+function rssApiUrl(query) {
+  return rssApiOrigin(location.hostname) + '/api/rss?' + query;
+}
+
+function newsEmptyMessage(fetchResult) {
+  const statuses = (fetchResult && fetchResult.httpStatuses) || [];
+  if (statuses.length && statuses.every(s => s === 404)) {
+    return 'このページのURLでは記事を取得できません。https://news-rss-brown.vercel.app を開いてください';
+  }
+  if (statuses.some(s => s === 0)) {
+    return '通信に失敗しました。再取得してください';
+  }
+  return '記事を取得できませんでした。再取得してください';
+}
 let settingsOpen = false;
 
 function syncTwinSelect(primaryId, twinId, value) {
@@ -743,6 +766,7 @@ async function fetchKeywordsForList(keywordList, opts = {}) {
   const label = opts.label || '';
   let fetchedAny = false;
   let failed = 0;
+  const httpStatuses = [];
 
   for (let i = 0; i < uniqueList.length; i++) {
     const kw = uniqueList[i];
@@ -751,24 +775,29 @@ async function fetchKeywordsForList(keywordList, opts = {}) {
     if (!silent) setProgress(5 + Math.round((i / uniqueList.length) * 90));
 
     try {
-      const res = await fetch(`/api/rss?keyword=${encodeURIComponent(kw)}&type=news&exclude=${excludeParam}&count=${fetchCount}`);
+      const res = await fetch(rssApiUrl(`keyword=${encodeURIComponent(kw)}&type=news&exclude=${excludeParam}&count=${fetchCount}`));
       if (!res.ok) {
         failed++;
+        httpStatuses.push(res.status);
         console.error('Fetch failed for:', kw, res.status);
       } else {
         const rawData = await res.json();
         const items = normalizeItems(rawData);
         articleCacheByKeyword.set(kw, { items, fetchedAt: new Date() });
         if (items.length) fetchedAny = true;
-        else failed++;
+        else {
+          failed++;
+          httpStatuses.push(200);
+        }
       }
     } catch (e) {
       failed++;
+      httpStatuses.push(0);
       console.error('Fetch skipped for:', kw);
     }
     await new Promise(r => setTimeout(r, 300));
   }
-  return { fetchedAny, failed, total: uniqueList.length };
+  return { fetchedAny, failed, total: uniqueList.length, httpStatuses };
 }
 
 function renderKeywordGroups() {
@@ -1499,6 +1528,7 @@ async function handleFetch(opts = {}) {
       const fetchResult = await fetchKeywordsForList(keywordsToFetch, { silent, label: scopeLabel });
       refreshNewsDisplayFromCache();
       lastNewsFetchEmpty = !!(fetchResult && fetchResult.total && !fetchResult.fetchedAny);
+      newsFetchEmptyMessage = newsEmptyMessage(fetchResult);
       notifyNewArticles(dataStore.news);
       if (!silent) setProgress(95);
 
@@ -1508,7 +1538,7 @@ async function handleFetch(opts = {}) {
       const kw = (type === 'social' && scInput) ? scInput.value.trim() : "";
       updateStatusText(opts.fromTimer ? '自動更新中...' : '取得中...');
       if (!silent) setProgress(40);
-      const res = await fetch(`/api/rss?type=${type}&keyword=${encodeURIComponent(kw)}&exclude=${excludeParam}&count=${fetchCount}`);
+      const res = await fetch(rssApiUrl(`type=${type}&keyword=${encodeURIComponent(kw)}&exclude=${excludeParam}&count=${fetchCount}`));
       if (!res.ok) throw new Error('通信エラー');
       const rawData = await res.json();
       let items = normalizeItems(rawData);
@@ -1518,7 +1548,7 @@ async function handleFetch(opts = {}) {
     }
 
     lastFetchAt = new Date();
-    updateStatusText(lastNewsFetchEmpty && currentTab === 'news' ? '⚠️ 記事を取得できませんでした' : '完了');
+    updateStatusText(lastNewsFetchEmpty && currentTab === 'news' ? `⚠️ ${newsFetchEmptyMessage}` : '完了');
     if (!silent) {
       setProgress(100);
       setTimeout(() => setProgress(0), 600);
@@ -1553,7 +1583,7 @@ function renderTable() {
     const emptyMsg = currentTab === 'fav'
       ? 'お気に入りはまだありません。記事左の★で追加できます'
       : (currentTab === 'news' && lastNewsFetchEmpty)
-        ? '記事を取得できませんでした。再取得してください'
+        ? newsFetchEmptyMessage
         : '下の「取得」を押してください';
     if (!document.getElementById('results-info') || document.getElementById('results-info').textContent !== '通信が混み合っています。少し待って再取得してください。') {
        document.getElementById('results').innerHTML = `<div id="results-info">${emptyMsg}</div>`;
