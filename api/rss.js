@@ -11,6 +11,17 @@ const USER_AGENT = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36
 // ソケットを共有し、いずれかがタイムアウトで破棄された際に関数全体がクラッシュすることがあったため無効化
 const httpsAgent = new https.Agent({ family: 4, keepAlive: false });
 
+// axios(follow-redirects)は、タイムアウトで中断した直後にソケットが二度目の'error'を出すことがあり、
+// それを誰も listen していないと Node がプロセスごと落とす（レスポンスは既に await 側の catch で処理済みでも発生する）。
+// 主要・ブログタブは同時に複数フィード（一部はリダイレクトあり）を取りに行くため、この経路で本番が
+// FUNCTION_INVOCATION_FAILED になっていた。ここで拾って、関数のクラッシュだけは防ぐ
+process.on('uncaughtException', (err) => {
+  console.error('[api/rss] uncaughtException', err && (err.stack || err.message || err));
+});
+process.on('unhandledRejection', (err) => {
+  console.error('[api/rss] unhandledRejection', err && (err.stack || err.message || err));
+});
+
 const normalizeEncoding = (encoding = 'utf-8') => {
   const enc = encoding.trim().toLowerCase().replace(/_/g, '-');
   if (enc === 'shift-jis' || enc === 'windows-31j' || enc === 'cp932') return 'shift-jis';
