@@ -2,375 +2,509 @@
 <html lang="ja">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
   <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>📰</text></svg>">
   <link rel="apple-touch-icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>📰</text></svg>">
-  <meta name="theme-color" content="#1a5c38">
+  <meta name="theme-color" content="#1a5c38" media="(prefers-color-scheme: light)">
+  <meta name="theme-color" content="#101311" media="(prefers-color-scheme: dark)">
+  <meta name="color-scheme" content="light dark">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <title>My News Dashboard</title>
   <style>
+    /* 色はすべてここのトークンから使う（ダークモードは下で上書き） */
     :root {
-      --bg: #f5f4f0; --surface: #ffffff; --border: #e2e0d8; --text: #1a1a18;
-      --muted: #6b6b66; --accent: #1a5c38; --accent-light: #e8f2ec;
-      --tag-bg: #eef7f2; --tag-border: #b5d9c5; --tag-text: #1a5c38; --link: #1a5c38;
+      --bg: #f5f4f0; --surface: #ffffff; --surface-2: #faf9f6; --border: #e2e0d8; --border-strong: #cfccc2;
+      --text: #1a1a18; --muted: #6b6b66; --faint: #8f8e87;
+      --accent: #1a5c38; --accent-fg: #1a5c38; --accent-light: #e8f2ec; --on-accent: #ffffff;
+      --tag-bg: #eef7f2; --tag-border: #b5d9c5; --tag-text: #1a5c38;
+      --cat-bg: #eef2f7; --cat-border: #cdd9e5; --cat-text: #34495e;
+      --new-bg: #fff3cd; --new-text: #7d5a00; --new-border: #ffe08a;
+      --hot-bg: #ffebee; --hot-text: #c62828; --hot-border: #ffcdd2;
+      --danger: #c0392b; --danger-bg: #fff0f0; --danger-border: #f5bbb7;
+      --star: #c9a227; --star-off: #bdb8ac;
+      --appbar: #1a5c38; --on-appbar: #ffffff;
+      --shadow: 0 1px 2px rgba(0,0,0,0.04);
+      --sheet-shadow: 0 -8px 24px rgba(0,0,0,0.12);
+      --skeleton-a: #e8e6e0; --skeleton-b: #f5f4f0;
+      --focus: #2d7fd3;
+      --appbar-h: 48px;
+    }
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --bg: #101311; --surface: #181c19; --surface-2: #1d221f; --border: #2b322d; --border-strong: #3a423c;
+        --text: #e9ebe6; --muted: #a4a9a2; --faint: #7c827b;
+        --accent: #2f8a58; --accent-fg: #7fd3a3; --accent-light: #1d3326; --on-accent: #ffffff;
+        --tag-bg: #1b2e23; --tag-border: #2f5a41; --tag-text: #9fdcb8;
+        --cat-bg: #1e2630; --cat-border: #34465a; --cat-text: #b8cbe0;
+        --new-bg: #3a3014; --new-text: #f3d27a; --new-border: #5c4c1c;
+        --hot-bg: #3a1c1e; --hot-text: #ff9a9a; --hot-border: #5c2b2e;
+        --danger: #ff8a80; --danger-bg: #3a1c1e; --danger-border: #5c2b2e;
+        --star: #e8c350; --star-off: #5d625d;
+        --appbar: #101311; --on-appbar: #e9ebe6;
+        --shadow: none;
+        --sheet-shadow: 0 -8px 24px rgba(0,0,0,0.5);
+        --skeleton-a: #212622; --skeleton-b: #2a302b;
+        --focus: #7fb8f0;
+      }
     }
     * { box-sizing: border-box; margin: 0; padding: 0; }
-    body { font-family: -apple-system, BlinkMacSystemFont, sans-serif; background: var(--bg); color: var(--text); padding-bottom: calc(4.5rem + env(safe-area-inset-bottom, 0px)); -webkit-tap-highlight-color: transparent; }
-    header { background: var(--accent); color: #fff; padding: 1.5rem 1rem; text-align: center; }
-    header h1 { font-size: 1.2rem; display: flex; align-items: center; justify-content: center; gap: 6px; }
-    header h1 .version { font-size: 0.6rem; background: rgba(255,255,255,0.2); padding: 2px 6px; border-radius: 10px; font-weight: normal; }
-    main { max-width: 900px; margin: 0 auto; padding: 1rem; }
-    .tabs { display: flex; gap: 4px; margin-bottom: 0.5rem; border-bottom: 2px solid var(--border); position: sticky; top: 0; background: var(--bg); z-index: 100; }
-    .tab-btn { background: none; border: none; font-size: 0.9rem; font-weight: 600; color: var(--muted); padding: 12px 5px; flex: 1; cursor: pointer; }
-    .tab-btn.active { color: var(--accent); border-bottom: 3px solid var(--accent); background: var(--accent-light); }
-    .card { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 1rem; margin-bottom: 1rem; box-shadow: 0 2px 4px rgba(0,0,0,0.02); }
-    .card-title { font-size: 0.75rem; font-weight: 700; color: var(--muted); margin-bottom: 0.8rem; display: flex; justify-content: space-between; }
-    .chips { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 0.8rem; }
-    
-    .chip { background: var(--tag-bg); color: var(--tag-text); border: 1px solid var(--tag-border); font-size: 0.75rem; padding: 4px 10px; border-radius: 16px; display: flex; align-items: center; }
-    .chip-del, .chip-bell { background: none; border: none; margin-left: 4px; cursor: pointer; font-weight: bold; color: var(--tag-text); padding: 0 4px; line-height: 1; }
-    .chip-bell { opacity: 0.35; font-size: 0.85rem; }
-    .chip-bell.on { opacity: 1; }
-    .chip.has-notify { box-shadow: inset 0 0 0 1px var(--accent); }
-    
-    .chip-ng { background: #fff0f0; color: #c0392b; border-color: #f5bbb7; }
-    .chip-ng .chip-del { color: #c0392b; }
-    .settings-row { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-top: 0.8rem; }
-    .settings-hint { font-size: 0.7rem; color: var(--muted); line-height: 1.4; margin-top: 0.5rem; }
-    .notify-status { font-size: 0.7rem; color: var(--muted); }
-    .notify-status.ok { color: var(--accent); font-weight: 600; }
-    .notify-status.warn { color: #c0392b; font-weight: 600; }
-    .input-group { display: flex; gap: 8px; }
-    .input-group input { flex: 1; border: 1px solid var(--border); border-radius: 8px; padding: 10px; font-size: 0.9rem; outline: none; }
-    .input-group input:focus { border-color: var(--accent); }
-    .btn { background: var(--accent); color: #fff; border: none; border-radius: 8px; padding: 10px 15px; font-size: 0.9rem; cursor: pointer; font-weight: 600; }
-    .btn-secondary { background: #6b6b66; }
-    .btn-ghost {
-      background: var(--surface); color: var(--text); border: 1px solid var(--border);
-      border-radius: 8px; padding: 8px 12px; font-size: 0.8rem; cursor: pointer; font-weight: 600;
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Hiragino Sans", "Hiragino Kaku Gothic ProN", "Noto Sans JP", "Yu Gothic UI", Meiryo, sans-serif;
+      background: var(--bg); color: var(--text); line-height: 1.5;
+      padding-bottom: calc(4.75rem + env(safe-area-inset-bottom, 0px));
+      -webkit-tap-highlight-color: transparent; -webkit-text-size-adjust: 100%;
     }
-    .btn-ghost.active { border-color: var(--accent); color: var(--accent); background: var(--accent-light); }
-    .btn:disabled { opacity: 0.5; cursor: not-allowed; }
+    button, input, select { font: inherit; color: inherit; }
+    button { cursor: pointer; }
+    :focus { outline: none; }
+    :focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; border-radius: 6px; }
+    .visually-hidden { position: absolute !important; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
 
-    .action-bar { display: flex; align-items: center; gap: 8px; margin-bottom: 0.6rem; flex-wrap: wrap; }
-    .action-bar .spacer { flex: 1; min-width: 4px; }
-    .quick-group-bar { display: none; margin: 0 0 0.5rem; position: sticky; top: 48px; z-index: 100; background: var(--bg); padding-top: 2px; }
-    .quick-group-bar.visible { display: block; }
-    .quick-group-label { font-size: 0.68rem; font-weight: 700; color: var(--muted); margin: 0 2px 4px; }
-    .quick-group-scroll {
+    /* ---------- アプリバーとタブ ---------- */
+    .appbar {
+      background: var(--appbar); color: var(--on-appbar);
+      padding: env(safe-area-inset-top, 0px) 0 0;
+    }
+    .appbar-inner {
+      max-width: 900px; margin: 0 auto; height: var(--appbar-h);
+      display: flex; align-items: center; gap: 8px; padding: 0 12px;
+    }
+    .appbar h1 { font-size: 1.02rem; font-weight: 700; letter-spacing: 0.02em; flex: 1; display: flex; align-items: center; gap: 6px; }
+    .icon-btn {
+      display: inline-flex; align-items: center; justify-content: center; gap: 4px;
+      min-width: 44px; min-height: 40px; padding: 0 10px; border-radius: 10px;
+      background: transparent; border: 1px solid transparent; color: inherit; font-size: 0.85rem; font-weight: 600;
+    }
+    .appbar .icon-btn { border-color: rgba(255,255,255,0.28); }
+    .appbar .icon-btn.active { background: rgba(255,255,255,0.18); }
+    .icon-btn svg { width: 18px; height: 18px; flex-shrink: 0; }
+
+    main { max-width: 900px; margin: 0 auto; padding: 0 12px; }
+    .tabs {
+      display: flex; gap: 2px; position: sticky; top: 0; z-index: 100;
+      background: var(--bg); border-bottom: 1px solid var(--border);
+      margin: 0 -12px 10px; padding: 0 8px;
+    }
+    .tab-btn {
+      flex: 1; background: none; border: none; border-bottom: 3px solid transparent;
+      font-size: 0.88rem; font-weight: 700; color: var(--muted);
+      padding: 12px 4px 10px; min-height: 48px; white-space: nowrap;
+    }
+    .tab-btn.active { color: var(--accent-fg); border-bottom-color: var(--accent-fg); }
+    .tab-icon { margin-right: 4px; }
+
+    /* ---------- クイック検索 ---------- */
+    .search-box { position: relative; margin-bottom: 10px; }
+    .search-box form { display: flex; gap: 8px; }
+    .search-field { position: relative; flex: 1; min-width: 0; }
+    .search-field svg { position: absolute; left: 12px; top: 50%; transform: translateY(-50%); width: 18px; height: 18px; color: var(--faint); pointer-events: none; }
+    .search-field input {
+      width: 100%; min-height: 46px; border: 1px solid var(--border-strong); border-radius: 12px;
+      background: var(--surface); padding: 10px 40px 10px 38px; font-size: 1rem; box-shadow: var(--shadow);
+    }
+    .search-field input::placeholder { color: var(--faint); }
+    .search-field input::-webkit-search-cancel-button { -webkit-appearance: none; display: none; }
+    .search-field input:focus { border-color: var(--accent-fg); }
+    .search-clear {
+      position: absolute; right: 4px; top: 50%; transform: translateY(-50%);
+      width: 38px; height: 38px; border: none; background: none; color: var(--faint); font-size: 1.1rem; border-radius: 50%;
+      display: none;
+    }
+    .search-clear.visible { display: block; }
+    .search-submit { min-height: 46px; padding: 0 18px; border-radius: 12px; }
+    .search-hint { font-size: 0.72rem; color: var(--muted); margin: 6px 2px 0; }
+    .search-recent[hidden] { display: none; }
+    .search-recent { display: flex; flex-wrap: wrap; gap: 6px; margin: 8px 0 0; align-items: center; }
+    .search-recent-label { font-size: 0.72rem; color: var(--muted); margin-right: 2px; }
+    .recent-chip {
+      border: 1px dashed var(--border-strong); background: transparent; color: var(--text);
+      border-radius: 999px; padding: 4px 12px; font-size: 0.8rem; min-height: 32px;
+    }
+
+    .quick-banner {
+      display: none; align-items: center; gap: 8px 8px; flex-wrap: wrap;
+      background: var(--accent-light); border: 1px solid var(--tag-border); border-radius: 12px;
+      padding: 8px 10px 8px 12px; margin-bottom: 10px;
+    }
+    .quick-banner.visible { display: flex; }
+    .quick-banner-text { flex: 1 1 100%; font-size: 0.85rem; }
+    .quick-banner-text strong { color: var(--accent-fg); font-size: 0.95rem; word-break: break-all; }
+    .quick-banner-text small { display: block; color: var(--muted); font-size: 0.72rem; }
+    .quick-banner .btn-ghost { flex: 1 1 auto; min-height: 38px; padding: 6px 12px; font-size: 0.8rem; }
+    @media (min-width: 601px) { .quick-banner-text { flex: 1 1 auto; } .quick-banner .btn-ghost { flex: 0 0 auto; } }
+
+    /* ---------- チップバー（グループ・キーワード・カテゴリ） ---------- */
+    .chip-bar { display: none; margin: 0 -12px 8px; }
+    .chip-bar.visible { display: block; }
+    .chip-bar-label { font-size: 0.7rem; font-weight: 700; color: var(--muted); margin: 0 14px 4px; }
+    .chip-scroll {
       display: flex; gap: 8px; overflow-x: auto; -webkit-overflow-scrolling: touch;
-      padding: 2px 2px 4px; scrollbar-width: thin;
+      padding: 2px 12px 6px; scrollbar-width: none; scroll-padding: 0 12px;
     }
-    .quick-group-scroll::-webkit-scrollbar { height: 4px; }
-    .quick-group-scroll::-webkit-scrollbar-thumb { background: var(--border); border-radius: 4px; }
-    .quick-group-chip {
-      flex: 0 0 auto; border: 1px solid var(--tag-border); background: var(--tag-bg);
-      color: var(--tag-text); border-radius: 999px; padding: 7px 13px; font-size: 0.8rem;
-      font-weight: 600; cursor: pointer; min-height: 36px; white-space: nowrap;
-    }
-    .quick-group-chip.active {
-      background: var(--accent); color: #fff; border-color: var(--accent);
-    }
-    .quick-group-chip:active { transform: scale(0.98); }
-    .quick-kw-bar { display: none; margin: 0 0 0.7rem; position: sticky; top: 96px; z-index: 99; background: var(--bg); padding-top: 2px; }
-    .quick-kw-bar.visible { display: block; }
-    .quick-kw-scroll {
-      display: flex; gap: 8px; overflow-x: auto; -webkit-overflow-scrolling: touch;
-      padding: 2px 2px 6px; scrollbar-width: thin;
-    }
-    .quick-kw-scroll::-webkit-scrollbar { height: 4px; }
-    .quick-kw-scroll::-webkit-scrollbar-thumb { background: var(--border); border-radius: 4px; }
-    .quick-kw-chip {
+    .chip-scroll::-webkit-scrollbar { display: none; }
+    .pill {
       flex: 0 0 auto; border: 1px solid var(--border); background: var(--surface);
-      color: var(--text); border-radius: 999px; padding: 8px 14px; font-size: 0.82rem;
-      font-weight: 600; cursor: pointer; min-height: 40px; white-space: nowrap;
+      color: var(--text); border-radius: 999px; padding: 6px 14px; font-size: 0.85rem;
+      font-weight: 600; min-height: 38px; white-space: nowrap;
     }
-    .quick-kw-chip.active {
-      background: var(--accent); color: #fff; border-color: var(--accent);
-    }
-    .quick-kw-chip:active { transform: scale(0.98); }
-    .status-bar {
-      display: flex; align-items: center; justify-content: space-between; gap: 8px;
-      margin-bottom: 0.6rem; padding: 8px 10px; background: var(--surface);
-      border: 1px solid var(--border); border-radius: 10px; font-size: 0.75rem; color: var(--muted);
-    }
-    .status-bar strong { color: var(--text); font-weight: 700; }
-    .status-info { font-size: 0.75rem; color: var(--muted); font-weight: 700; white-space: nowrap; }
-    .filter-summary { font-size: 0.72rem; color: var(--muted); }
+    .pill.group { border-color: var(--tag-border); background: var(--tag-bg); color: var(--tag-text); font-size: 0.8rem; min-height: 34px; padding: 5px 12px; }
+    .pill.active { background: var(--accent); color: var(--on-accent); border-color: var(--accent); }
+    .pill:active { transform: scale(0.98); }
+    .pill .count { font-weight: 500; opacity: 0.7; margin-left: 5px; font-size: 0.78em; }
 
-    .settings-panel { display: none; margin-bottom: 0.8rem; }
+    /* ---------- ツールバー（件数・状態・絞り込み） ---------- */
+    .toolbar { display: flex; align-items: center; gap: 8px; margin: 2px 0 8px; min-height: 40px; }
+    .toolbar-status { flex: 1; min-width: 0; font-size: 0.78rem; color: var(--muted); }
+    .toolbar-status strong { color: var(--text); font-weight: 700; }
+    .toolbar-status .filter-summary { display: block; font-size: 0.7rem; color: var(--faint); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .status-warn { color: var(--danger); font-weight: 700; }
+    .btn-ghost {
+      background: var(--surface); color: var(--text); border: 1px solid var(--border-strong);
+      border-radius: 10px; padding: 8px 12px; font-size: 0.82rem; font-weight: 600; min-height: 40px;
+      display: inline-flex; align-items: center; justify-content: center; gap: 4px; white-space: nowrap;
+    }
+    .btn-ghost.active { border-color: var(--accent-fg); color: var(--accent-fg); background: var(--accent-light); }
+    .btn-ghost.danger { color: var(--danger); border-color: var(--danger-border); }
+    .btn-ghost svg { width: 16px; height: 16px; }
+    .filter-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--accent-fg); display: none; }
+    .filter-dot.on { display: inline-block; }
+
+    .btn {
+      background: var(--accent); color: var(--on-accent); border: none; border-radius: 10px;
+      padding: 10px 16px; font-size: 0.92rem; font-weight: 700; min-height: 44px; white-space: nowrap;
+      display: inline-flex; align-items: center; justify-content: center; gap: 6px;
+    }
+    .btn:disabled { opacity: 0.55; cursor: progress; }
+    .btn svg { width: 18px; height: 18px; }
+    .btn.spinning svg { animation: spin 0.9s linear infinite; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* ---------- 設定パネル ---------- */
+    .card { background: var(--surface); border: 1px solid var(--border); border-radius: 14px; padding: 14px; margin-bottom: 12px; box-shadow: var(--shadow); }
+    .settings-panel { display: none; }
     .settings-panel.open { display: block; }
-    .settings-section { margin-bottom: 1rem; }
-    .settings-section:last-child { margin-bottom: 0; }
-    .tab-panel { display: none; margin-bottom: 0.8rem; }
+    .settings-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 4px; }
+    .settings-head h2 { font-size: 1rem; }
+    .settings-section { padding: 14px 0; border-top: 1px solid var(--border); }
+    .settings-section:first-of-type { border-top: none; padding-top: 6px; }
+    .section-title { font-size: 0.9rem; font-weight: 700; margin-bottom: 8px; }
+    .section-title small { display: block; font-weight: 500; color: var(--muted); font-size: 0.74rem; margin-top: 1px; }
+    .settings-hint { font-size: 0.74rem; color: var(--muted); line-height: 1.55; margin: 2px 0 10px; }
+    .chips { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 10px; }
+    .chips:empty::before { content: attr(data-empty); font-size: 0.8rem; color: var(--faint); }
+    .chip {
+      background: var(--tag-bg); color: var(--tag-text); border: 1px solid var(--tag-border);
+      font-size: 0.82rem; padding: 2px 2px 2px 12px; border-radius: 999px; display: inline-flex; align-items: center; min-height: 36px;
+    }
+    .chip-del, .chip-bell {
+      background: none; border: none; color: var(--tag-text); line-height: 1;
+      width: 32px; height: 32px; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center;
+    }
+    .chip-del { font-size: 1.05rem; font-weight: 700; }
+    .chip-bell { font-size: 0.85rem; filter: grayscale(1); opacity: 0.4; }
+    .chip-bell.on { filter: none; opacity: 1; }
+    .chip.has-notify { box-shadow: inset 0 0 0 1px var(--accent-fg); }
+    .chip-ng { background: var(--danger-bg); color: var(--danger); border-color: var(--danger-border); }
+    .chip-ng .chip-del { color: var(--danger); }
+    .input-group { display: flex; gap: 8px; flex-wrap: wrap; }
+    .input-group > input, .input-group > select { flex: 1 1 10rem; min-width: 0; }
+    .text-input, .sort-select {
+      border: 1px solid var(--border-strong); border-radius: 10px; background: var(--surface);
+      padding: 9px 10px; font-size: 0.95rem; min-height: 44px;
+    }
+    .text-input:focus, .sort-select:focus { border-color: var(--accent-fg); }
+    .settings-row { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-top: 10px; }
+    .notify-status { font-size: 0.75rem; color: var(--muted); }
+    .notify-status.ok { color: var(--accent-fg); font-weight: 600; }
+    .notify-status.warn { color: var(--danger); font-weight: 600; }
+    .app-version { font-size: 0.7rem; color: var(--faint); text-align: right; margin-top: 4px; }
+
+    .tab-panel { display: none; margin-bottom: 10px; }
     .tab-panel.active { display: block; }
 
-    .sort-select { border: 1px solid var(--border); border-radius: 8px; padding: 8px; font-size: 0.8rem; background: #fff; }
-    .filter-field { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
-    .filter-field label { font-size: 0.68rem; font-weight: 700; color: var(--muted); }
-    .filter-fields { display: flex; flex-wrap: wrap; gap: 8px; align-items: flex-end; }
-
-    .sheet-backdrop {
-      display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.35); z-index: 200;
-    }
+    /* ---------- 絞り込み（PCはインライン、スマホは下からシート） ---------- */
+    .sheet-backdrop { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.4); z-index: 200; }
     .sheet-backdrop.open { display: block; }
-    #filter-sheet {
-      background: var(--surface); border: 1px solid var(--border); border-radius: 12px;
-      padding: 12px; margin-bottom: 0.8rem;
-    }
+    #filter-sheet { background: var(--surface); border: 1px solid var(--border); border-radius: 14px; padding: 12px; margin-bottom: 10px; }
     .sheet-header { display: none; }
-    .sheet-actions { display: none; margin-top: 12px; }
+    .sheet-actions { display: none; margin-top: 14px; }
+    .filter-fields { display: flex; flex-wrap: wrap; gap: 10px 14px; align-items: flex-end; }
+    .filter-field { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+    .filter-field > label, .filter-field > .field-label { font-size: 0.7rem; font-weight: 700; color: var(--muted); }
+    .segmented { display: inline-flex; background: var(--surface-2); border: 1px solid var(--border-strong); border-radius: 10px; padding: 2px; gap: 2px; }
+    .segmented button {
+      border: none; background: transparent; border-radius: 8px; padding: 6px 12px; min-height: 36px;
+      font-size: 0.82rem; font-weight: 600; color: var(--muted); white-space: nowrap;
+    }
+    .segmented button[aria-pressed="true"] { background: var(--accent); color: var(--on-accent); }
+    .native-select-hidden { display: none; }
 
+    /* ---------- 下部の更新バー（スマホ） ---------- */
     .fetch-bar {
       position: fixed; left: 0; right: 0; bottom: 0; z-index: 150;
-      background: rgba(245, 244, 240, 0.96); border-top: 1px solid var(--border);
-      padding: 10px 12px calc(10px + env(safe-area-inset-bottom, 0px));
-      backdrop-filter: blur(8px);
+      background: color-mix(in srgb, var(--bg) 94%, transparent); border-top: 1px solid var(--border);
+      padding: 8px 12px calc(8px + env(safe-area-inset-bottom, 0px));
+      -webkit-backdrop-filter: blur(8px); backdrop-filter: blur(8px);
     }
+    .fetch-bar.hidden { display: none; }
     .fetch-bar-inner { max-width: 900px; margin: 0 auto; display: flex; gap: 10px; align-items: center; }
-    .fetch-bar .btn { flex: 1; min-height: 48px; font-size: 1rem; }
-    .fetch-bar-status { font-size: 0.7rem; color: var(--muted); font-weight: 700; min-width: 4.5rem; text-align: right; }
+    .fetch-bar .btn { flex: 1; min-height: 50px; font-size: 1rem; border-radius: 14px; }
+    .to-top { flex: 0 0 auto; width: 50px; min-height: 50px; border-radius: 14px; }
 
-    .results-summary { font-size: 0.75rem; color: var(--muted); margin-bottom: 0.5rem; padding: 0 2px; }
-    .list-wrap { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; overflow: hidden; }
+    /* ---------- 記事一覧 ---------- */
+    #progress-bar-wrap { width: 100%; height: 3px; background: var(--border); border-radius: 2px; margin-bottom: 8px; overflow: hidden; display: none; }
+    #progress-bar { height: 100%; background: var(--accent-fg); border-radius: 2px; width: 0%; transition: width 0.3s ease; }
+    .list-wrap { background: var(--surface); border: 1px solid var(--border); border-radius: 14px; overflow: hidden; box-shadow: var(--shadow); }
     .article-list { list-style: none; margin: 0; padding: 0; }
     .article-item { border-bottom: 1px solid var(--border); }
     .article-item:last-child { border-bottom: none; }
-    .article-row { display: flex; align-items: stretch; gap: 0; }
-    .fav-btn {
-      flex-shrink: 0; width: 44px; border: none; background: transparent;
-      color: #c5c0b5; font-size: 1.15rem; cursor: pointer; line-height: 1;
-    }
-    .fav-btn.on { color: #c9a227; }
-    .fav-btn:active { background: var(--accent-light); }
+    .article-row { display: flex; align-items: stretch; }
     .article-link {
-      display: block; flex: 1; padding: 14px 12px 14px 4px; text-decoration: none; color: inherit;
-      min-height: 44px; -webkit-tap-highlight-color: transparent;
+      display: block; flex: 1; min-width: 0; padding: 12px 4px 12px 14px; text-decoration: none; color: inherit;
     }
     .article-link:active { background: var(--accent-light); }
-    .article-title-row { display: flex; flex-wrap: wrap; align-items: baseline; gap: 6px; line-height: 1.45; }
-    .article-title { font-size: 0.95rem; font-weight: 600; color: var(--text); word-break: break-word; }
+    @media (hover: hover) { .article-link:hover .article-title { text-decoration: underline; text-underline-offset: 3px; } }
+    .article-title { font-size: 0.98rem; font-weight: 600; line-height: 1.5; color: var(--text); word-break: break-word; }
     .article-meta {
-      margin-top: 6px; font-size: 0.72rem; color: var(--muted);
-      display: flex; flex-wrap: wrap; align-items: center; gap: 6px; line-height: 1.3;
+      margin-top: 4px; font-size: 0.76rem; color: var(--muted);
+      display: flex; flex-wrap: wrap; align-items: center; gap: 4px 8px; line-height: 1.4;
     }
-    .meta-source { font-weight: 700; color: #3d5a4a; }
-    .meta-sep { opacity: 0.45; }
-    .badge-visited {
-      display: inline-block; font-size: 0.6rem; font-weight: 700; padding: 1px 5px; border-radius: 4px;
-      background: #eee; color: #666; border: 1px solid #ddd; vertical-align: middle;
+    .meta-source { font-weight: 700; color: var(--text); opacity: 0.8; }
+    .fav-btn {
+      flex-shrink: 0; width: 48px; border: none; background: transparent;
+      color: var(--star-off); font-size: 1.25rem; line-height: 1;
     }
-    .article-item.visited { opacity: 0.72; }
+    .fav-btn.on { color: var(--star); }
+    .fav-btn:active { background: var(--accent-light); }
+    .badge-new, .badge-hot, .badge-visited {
+      display: inline-block; font-size: 0.66rem; font-weight: 700; padding: 0 6px; border-radius: 4px; line-height: 1.6;
+    }
+    .badge-new { background: var(--new-bg); color: var(--new-text); border: 1px solid var(--new-border); }
+    .badge-hot { background: var(--hot-bg); color: var(--hot-text); border: 1px solid var(--hot-border); }
+    .badge-visited { background: transparent; color: var(--faint); border: 1px solid var(--border-strong); }
+    .kw-tag { font-size: 0.68rem; padding: 0 7px; border-radius: 999px; background: var(--tag-bg); color: var(--tag-text); border: 1px solid var(--tag-border); white-space: nowrap; line-height: 1.6; }
+    .cat-tag { background: var(--cat-bg); color: var(--cat-text); border-color: var(--cat-border); }
     .article-item.visited .article-title { font-weight: 500; color: var(--muted); }
+    .article-item.visited .meta-source { opacity: 0.6; }
+
+    .empty-state { text-align: center; padding: 3rem 1rem; color: var(--muted); font-size: 0.92rem; }
+    .empty-state .empty-icon { font-size: 2rem; display: block; margin-bottom: 8px; }
+    .empty-state p + p { margin-top: 4px; font-size: 0.8rem; }
+    .empty-state .empty-actions { margin-top: 14px; display: flex; gap: 8px; justify-content: center; flex-wrap: wrap; }
+
+    .skeleton-wrap { background: var(--surface); border: 1px solid var(--border); border-radius: 14px; overflow: hidden; }
+    .skeleton-row { padding: 14px; border-bottom: 1px solid var(--border); }
+    .skeleton-block { background: linear-gradient(90deg, var(--skeleton-a) 25%, var(--skeleton-b) 50%, var(--skeleton-a) 75%); background-size: 200% 100%; animation: shimmer 1.4s infinite; border-radius: 6px; }
+    @keyframes shimmer { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
+    .sk-title { height: 16px; width: 88%; margin-bottom: 8px; }
+    .sk-meta { height: 10px; width: 42%; }
+
+    .toast {
+      position: fixed; left: 50%; bottom: calc(5.5rem + env(safe-area-inset-bottom, 0px)); transform: translate(-50%, 12px);
+      background: var(--text); color: var(--bg); padding: 10px 16px; border-radius: 10px; font-size: 0.85rem; font-weight: 600;
+      opacity: 0; pointer-events: none; transition: opacity 0.2s, transform 0.2s; z-index: 300; width: max-content; max-width: calc(100% - 32px); text-align: center;
+    }
+    .toast.show { opacity: 1; transform: translate(-50%, 0); }
+
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after { animation-duration: 0.01ms !important; transition-duration: 0.01ms !important; }
+    }
 
     @media (max-width: 600px) {
-      header { padding: 1rem; }
-      header h1 { font-size: 1rem; }
-      main { padding: 0.4rem; }
-      .card { padding: 0.8rem; margin-bottom: 0.6rem; }
-      
-      .chip { font-size: 0.8rem; padding: 4px 10px; }
-      .chip-del { font-size: 1.1rem; padding: 2px 4px; min-width: auto; min-height: auto; display: flex; align-items: center; justify-content: center; }
-      
-      .btn { padding: 12px 16px; font-size: 1rem; min-height: 44px; }
-      .btn-ghost { min-height: 44px; font-size: 0.85rem; }
-      .sort-select { font-size: 0.85rem; padding: 10px 8px; min-height: 44px; width: 100%; }
-      .input-group input { font-size: 1rem; padding: 12px 10px; min-height: 44px; }
-      .tab-btn { font-size: 0.8rem; padding: 14px 4px; min-height: 48px; }
-      .article-link { padding: 14px 10px 14px 2px; }
-      .article-title { font-size: 0.98rem; }
-      .kw-tag { font-size: 0.7rem; }
-      .badge-new { font-size: 0.65rem; }
-      .tabs { padding-top: env(safe-area-inset-top, 0px); }
-
-      /* モバイル: 絞り込みは下からシート */
+      .desktop-only { display: none !important; }
+      .tab-btn { font-size: 0.82rem; }
+      .tab-icon { display: block; margin: 0 0 1px; font-size: 1rem; line-height: 1.1; }
+      .tab-btn { padding: 8px 2px 6px; }
       #filter-sheet {
         display: none; position: fixed; left: 0; right: 0; bottom: 0; z-index: 220;
-        margin: 0; border-radius: 16px 16px 0 0; border: none; border-top: 1px solid var(--border);
+        margin: 0; border-radius: 18px 18px 0 0; border: none; border-top: 1px solid var(--border);
         padding: 16px 16px calc(16px + env(safe-area-inset-bottom, 0px));
-        max-height: 78vh; overflow: auto;
-        box-shadow: 0 -8px 24px rgba(0,0,0,0.12);
+        max-height: 82vh; overflow: auto; box-shadow: var(--sheet-shadow);
       }
       #filter-sheet.open { display: block; }
-      .sheet-header {
-        display: flex; align-items: center; justify-content: space-between;
-        margin-bottom: 12px; font-weight: 700; font-size: 0.95rem;
-      }
-      .sheet-actions { display: flex; gap: 8px; }
+      .sheet-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px; font-weight: 700; font-size: 1rem; }
+      .sheet-actions { display: flex; }
       .sheet-actions .btn { flex: 1; }
-      .filter-fields { flex-direction: column; }
-      .filter-fields .filter-field { width: 100%; }
-      .desktop-only-filters { display: none !important; }
+      .filter-fields { flex-direction: column; align-items: stretch; gap: 14px; }
+      .segmented { display: flex; }
+      .segmented button { flex: 1; }
+      .filter-field .sort-select { width: 100%; }
     }
-
     @media (min-width: 601px) {
       .mobile-only { display: none !important; }
       .fetch-bar { display: none; }
       body { padding-bottom: 2rem; }
-      #filter-sheet { display: block !important; background: transparent; border: none; padding: 0; margin-bottom: 0.8rem; }
+      #filter-sheet { display: block !important; background: transparent; border: none; padding: 0; }
       .sheet-backdrop { display: none !important; }
-      #desktop-fetch-btn { display: inline-block; }
+      .article-link { padding: 12px 8px 12px 18px; }
     }
-    @media (max-width: 600px) {
-      #desktop-fetch-btn { display: none !important; }
-    }
-    
-    .badge-new { display: inline-block; font-size: 0.6rem; font-weight: 700; padding: 1px 5px; border-radius: 4px; background: #fff3cd; color: #7d5a00; border: 1px solid #ffe08a; vertical-align: middle; }
-    .badge-hot { display: inline-block; font-size: 0.6rem; font-weight: 700; padding: 1px 5px; border-radius: 4px; background: #ffebee; color: #c62828; border: 1px solid #ffcdd2; vertical-align: middle; }
-    
-    .kw-tag { font-size: 0.65rem; padding: 2px 6px; border-radius: 10px; background: var(--tag-bg); color: var(--tag-text); border: 1px solid var(--tag-border); white-space: nowrap; display: inline-block; vertical-align: middle; }
-    .cat-tag { background: #eef2f7; color: #34495e; border-color: #cdd9e5; }
-    
-    #results-info { text-align: center; padding: 4rem 1rem; color: var(--muted); font-size: 0.9rem; }
-
-    #progress-bar-wrap { width: 100%; height: 4px; background: var(--border); border-radius: 2px; margin-bottom: 1rem; overflow: hidden; display: none; }
-    #progress-bar { height: 100%; background: var(--accent); border-radius: 2px; width: 0%; transition: width 0.3s ease; }
-    .skeleton-wrap { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; overflow: hidden; }
-    .skeleton-row { padding: 14px 12px; border-bottom: 1px solid var(--border); }
-    .skeleton-block { background: linear-gradient(90deg, #e8e6e0 25%, #f5f4f0 50%, #e8e6e0 75%); background-size: 200% 100%; animation: shimmer 1.4s infinite; border-radius: 6px; }
-    @keyframes shimmer { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
-    .sk-title { height: 16px; width: 88%; margin-bottom: 8px; }
-    .sk-meta { height: 10px; width: 42%; }
   </style>
 </head>
 <body>
 
-<header>
-  <h1>📰 News Dashboard <span class="version">v8.11</span></h1>
+<header class="appbar">
+  <div class="appbar-inner">
+    <h1><span aria-hidden="true">📰</span> My News</h1>
+    <button type="button" id="settings-toggle-btn" class="icon-btn" onclick="toggleSettingsPanel()" aria-expanded="false" aria-controls="settings-panel">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+      <span id="settings-toggle-label">設定</span>
+    </button>
+  </div>
 </header>
 
 <main>
-  <div class="tabs">
-    <button id="tab-news" class="tab-btn active" onclick="switchTab('news')">🔍 ニュース</button>
-    <button id="tab-major" class="tab-btn" onclick="switchTab('major')">🌍 主要</button>
-    <button id="tab-social" class="tab-btn" onclick="switchTab('social')">📝 ブログ</button>
-    <button id="tab-fav" class="tab-btn" onclick="switchTab('fav')">★ お気に入り</button>
-  </div>
+  <nav class="tabs" role="tablist" aria-label="表示の切り替え">
+    <button id="tab-news" class="tab-btn active" role="tab" aria-selected="true" onclick="switchTab('news')"><span class="tab-icon" aria-hidden="true">🔍</span>ニュース</button>
+    <button id="tab-major" class="tab-btn" role="tab" aria-selected="false" onclick="switchTab('major')"><span class="tab-icon" aria-hidden="true">🌍</span>主要</button>
+    <button id="tab-social" class="tab-btn" role="tab" aria-selected="false" onclick="switchTab('social')"><span class="tab-icon" aria-hidden="true">📝</span>ブログ</button>
+    <button id="tab-fav" class="tab-btn" role="tab" aria-selected="false" onclick="switchTab('fav')"><span class="tab-icon" aria-hidden="true">★</span>お気に入り</button>
+  </nav>
 
-  <div id="quick-group-bar" class="quick-group-bar">
-    <div class="quick-group-label">キーワードグループ</div>
-    <div id="quick-group-scroll" class="quick-group-scroll" role="tablist" aria-label="キーワードグループ切替"></div>
-  </div>
+  <section id="settings-panel" class="settings-panel card" aria-label="設定">
+    <div class="settings-head">
+      <h2>設定</h2>
+      <button type="button" class="btn-ghost" onclick="toggleSettingsPanel(false)">閉じる</button>
+    </div>
 
-  <div id="quick-kw-bar" class="quick-kw-bar visible">
-    <div id="quick-kw-scroll" class="quick-kw-scroll" role="tablist" aria-label="キーワード切替"></div>
-  </div>
-
-  <div class="action-bar">
-    <button type="button" id="settings-toggle-btn" class="btn-ghost" onclick="toggleSettingsPanel()">設定</button>
-    <button type="button" id="filter-toggle-btn" class="btn-ghost mobile-only" onclick="openFilterSheet()">絞り込み</button>
-    <div class="spacer"></div>
-    <button type="button" id="desktop-fetch-btn" class="btn" onclick="handleFetch()">取得</button>
-  </div>
-
-  <div id="status-bar" class="status-bar">
-    <div id="status-info" class="status-info">待機中</div>
-    <div id="filter-summary" class="filter-summary"></div>
-  </div>
-
-  <div id="settings-panel" class="settings-panel card">
     <div id="kw-section" class="settings-section">
-      <div class="card-title">検索キーワード <span>※🔔で新着通知対象</span></div>
-      <div id="chips-kw" class="chips"></div>
+      <div class="section-title">登録キーワード <small>毎回このキーワードで検索します</small></div>
+      <div id="chips-kw" class="chips" data-empty="まだありません。下の欄から追加してください"></div>
       <div class="input-group">
-        <input type="text" id="kw-input" placeholder="追加キーワード..." inputmode="text" autocomplete="off" autocorrect="off" autocapitalize="none" spellcheck="false" />
-        <button class="btn btn-secondary" onclick="addItem('kw')">追加</button>
+        <input type="text" id="kw-input" class="text-input" placeholder="キーワードを追加（例: 麻生区）" enterkeyhint="done" autocomplete="off" autocorrect="off" autocapitalize="none" spellcheck="false" aria-label="追加するキーワード" />
+        <button type="button" class="btn" onclick="addItem('kw')">追加</button>
       </div>
       <div class="settings-row" id="notify-settings-row">
-        <button type="button" id="notify-perm-btn" class="btn btn-secondary" onclick="requestNotifyPermission()" style="padding:8px 12px; font-size:0.8rem;">通知を許可</button>
-        <span id="notify-status" class="notify-status">通知: 未設定</span>
+        <button type="button" id="notify-perm-btn" class="btn-ghost" onclick="requestNotifyPermission()">通知を許可</button>
+        <span id="notify-status" class="notify-status" role="status">通知: 未設定</span>
       </div>
-      <p class="settings-hint">キーワード右の🔔をオンにすると、その語の新着をブラウザ通知します。初回は「通知を許可」が必要です。</p>
+      <p class="settings-hint">キーワードの🔔をオンにすると、その語の新着をブラウザ通知します（この画面を開いている間）。</p>
+    </div>
 
-      <div class="card-title" style="margin-top:1rem;">キーワードグループ</div>
+    <div id="group-section" class="settings-section">
+      <div class="section-title">キーワードグループ <small>「政治」「地元」などで一覧を切り替え</small></div>
       <div class="input-group" style="margin-bottom:8px;">
-        <select id="kw-group-sel" class="sort-select" style="flex:1;"></select>
-        <button type="button" class="btn btn-secondary" onclick="loadKeywordGroupForEdit()">編集用に読み込み</button>
-        <button type="button" class="btn btn-secondary" onclick="startNewKeywordGroup()" title="空のキーワード一覧から新規グループを作成">新規</button>
+        <select id="kw-group-sel" class="sort-select" onchange="onGroupSelectChange()" aria-label="表示中のグループ"></select>
+        <button type="button" class="btn-ghost" onclick="startNewKeywordGroup()" title="空のキーワード一覧から新しいグループを作る">＋ 新規</button>
       </div>
       <div class="input-group">
-        <input type="text" id="kw-group-name" placeholder="グループ名（例: 政治, 地元）" inputmode="text" autocomplete="off" />
-        <button type="button" class="btn btn-secondary" onclick="saveKeywordGroup()">保存</button>
-        <button type="button" class="btn-ghost" onclick="deleteKeywordGroup()" title="選択中グループを削除">削除</button>
+        <input type="text" id="kw-group-name" class="text-input" placeholder="グループ名（例: 地元）" enterkeyhint="done" autocomplete="off" aria-label="グループ名" />
+        <button type="button" class="btn" onclick="saveKeywordGroup()">名前を付けて保存</button>
       </div>
-      <p class="settings-hint">「新規」で空の一覧から作成するか、いまの一覧を名前付きで保存します。追加・削除はアクティブなグループに自動反映されます。表示の切り替えは表画面上のグループボタンから行えます。</p>
+      <div class="settings-row">
+        <button type="button" id="kw-group-del-btn" class="btn-ghost danger" onclick="deleteKeywordGroup()">選択中のグループを削除</button>
+      </div>
+      <p class="settings-hint">グループを選ぶと、上の登録キーワードがそのグループの一覧に切り替わります。追加・削除は選んだグループにそのまま保存されます。</p>
     </div>
 
     <div id="ng-section" class="settings-section">
-      <div class="card-title">除外(NG)ワード <span>※全タブ共通</span></div>
-      <div id="chips-ng" class="chips"></div>
+      <div class="section-title">除外（NG）ワード <small>全タブ共通</small></div>
+      <div id="chips-ng" class="chips" data-empty="なし"></div>
       <div class="input-group">
-        <input type="text" id="ng-input" placeholder="例: 公明新聞, PR TIMES" inputmode="text" autocomplete="off" autocorrect="off" autocapitalize="none" spellcheck="false" />
-        <button class="btn btn-secondary" onclick="addItem('ng')">追加</button>
+        <input type="text" id="ng-input" class="text-input" placeholder="例: PR TIMES" enterkeyhint="done" autocomplete="off" autocorrect="off" autocapitalize="none" spellcheck="false" aria-label="追加する除外ワード" />
+        <button type="button" class="btn" onclick="addItem('ng')">追加</button>
       </div>
+      <p class="settings-hint">見出しか出典にこの語を含む記事を表示しません。</p>
+    </div>
+    <div class="app-version">v9.0</div>
+  </section>
+
+  <div id="news-card" class="tab-panel">
+    <div class="search-box" role="search">
+      <form id="quick-search-form" onsubmit="event.preventDefault(); runQuickSearch();">
+        <div class="search-field">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+          <input type="search" id="quick-input" placeholder="今すぐ検索（登録不要）" enterkeyhint="search" autocomplete="off" autocorrect="off" autocapitalize="none" spellcheck="false" aria-label="キーワードで今すぐ検索" list="quick-history" />
+          <button type="button" id="quick-clear-btn" class="search-clear" onclick="clearQuickInput()" aria-label="入力を消す">×</button>
+        </div>
+        <button type="submit" class="btn search-submit">検索</button>
+      </form>
+      <datalist id="quick-history"></datalist>
+      <div id="quick-recent" class="search-recent" hidden></div>
+    </div>
+    <div id="quick-banner" class="quick-banner" role="status">
+      <div class="quick-banner-text"><span id="quick-banner-label"></span><small>登録キーワードとは別の一時的な検索です</small></div>
+      <button type="button" id="quick-register-btn" class="btn-ghost" onclick="registerQuickKeyword()">＋ 登録</button>
+      <button type="button" class="btn-ghost" onclick="exitQuickSearch()">登録キーワードに戻る</button>
     </div>
   </div>
 
-  <div id="mj-card" class="tab-panel card">
-    <p style="font-size:0.85rem; color:var(--muted); margin:0;">Yahoo!トピックスなどから主要ニュースを取得し、自動仕分けします。</p>
+  <div id="quick-group-bar" class="chip-bar">
+    <div class="chip-bar-label">グループ</div>
+    <div id="quick-group-scroll" class="chip-scroll" role="tablist" aria-label="キーワードグループ切替"></div>
   </div>
 
-  <div id="sc-card" class="tab-panel card">
-    <div class="card-title">ブログ検索 <span>※未入力なら はてな＆noteの注目</span></div>
-    <div class="input-group">
-      <input type="text" id="sc-input" placeholder="検索したいワード（例: 政治, ライフハック）" inputmode="search" autocomplete="off" autocorrect="off" autocapitalize="none" spellcheck="false" />
+  <div id="quick-kw-bar" class="chip-bar visible">
+    <div id="quick-kw-scroll" class="chip-scroll" role="tablist" aria-label="キーワードで絞り込み"></div>
+  </div>
+
+  <div id="major-cat-bar" class="chip-bar">
+    <div id="major-cat-scroll" class="chip-scroll" role="tablist" aria-label="カテゴリで絞り込み"></div>
+  </div>
+
+  <div id="sc-card" class="tab-panel">
+    <form class="search-box" role="search" onsubmit="event.preventDefault(); handleFetch();">
+      <div style="display:flex; gap:8px;">
+        <div class="search-field">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+          <input type="search" id="sc-input" placeholder="ブログを検索（空欄なら注目記事）" enterkeyhint="search" autocomplete="off" autocorrect="off" autocapitalize="none" spellcheck="false" aria-label="ブログを検索" />
+        </div>
+        <button type="submit" class="btn search-submit">検索</button>
+      </div>
+      <p class="search-hint">note のハッシュタグ・はてなブックマークのタグから探します</p>
+    </form>
+  </div>
+
+  <div class="toolbar">
+    <div class="toolbar-status">
+      <div id="status-info" role="status" aria-live="polite">待機中</div>
+      <span id="filter-summary" class="filter-summary"></span>
     </div>
+    <button type="button" id="filter-toggle-btn" class="btn-ghost mobile-only" onclick="openFilterSheet()" aria-controls="filter-sheet">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M4 6h16M7 12h10M10 18h4"/></svg>
+      並び・期間<span id="filter-dot" class="filter-dot"></span>
+    </button>
+    <button type="button" id="desktop-fetch-btn" class="btn desktop-only" onclick="handleFetch()">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 12a9 9 0 1 1-2.64-6.36"/><path d="M21 3v6h-6"/></svg>
+      <span class="fetch-label">最新に更新</span>
+    </button>
   </div>
 
   <div id="sheet-backdrop" class="sheet-backdrop" onclick="closeFilterSheet()"></div>
-  <div id="filter-sheet">
+  <div id="filter-sheet" role="dialog" aria-label="並び・期間">
     <div class="sheet-header">
-      <span>絞り込み</span>
-      <button type="button" class="btn-ghost" onclick="closeFilterSheet()" style="padding:6px 10px;">閉じる</button>
+      <span>並び・期間</span>
+      <button type="button" class="btn-ghost" onclick="closeFilterSheet()">閉じる</button>
     </div>
     <div class="filter-fields">
       <div class="filter-field">
-        <label for="sort-sel">並び</label>
-        <select id="sort-sel" class="sort-select" onchange="onFilterChange()">
+        <span class="field-label">並び</span>
+        <div class="segmented" data-for="sort-sel" role="group" aria-label="並び"></div>
+        <select id="sort-sel" class="native-select-hidden" onchange="onFilterChange()" aria-hidden="true" tabindex="-1">
           <option value="date">新しい順</option>
           <option value="hot">話題順</option>
           <option id="sort-opt-keyword" value="keyword">キーワード順</option>
         </select>
       </div>
       <div class="filter-field">
-        <label for="period-sel">期間</label>
-        <select id="period-sel" class="sort-select" onchange="onPeriodChange()">
+        <span class="field-label">期間</span>
+        <div class="segmented" data-for="period-sel" role="group" aria-label="期間"></div>
+        <select id="period-sel" class="native-select-hidden" onchange="onPeriodChange()" aria-hidden="true" tabindex="-1">
           <option value="all">すべて</option>
           <option value="today">今日</option>
           <option value="24h">24時間</option>
           <option value="3d">3日</option>
         </select>
       </div>
-      <div class="filter-field" id="news-kw-field">
-        <label for="news-kw-sel">キーワード</label>
-        <select id="news-kw-sel" class="sort-select" onchange="onFilterChange()">
-          <option value="all">全キーワード</option>
-        </select>
-      </div>
-      <div class="filter-field" id="major-cat-field" style="display:none;">
-        <label for="major-cat-sel">カテゴリ</label>
-        <select id="major-cat-sel" class="sort-select" onchange="onFilterChange()">
-          <option value="all">全カテゴリ</option>
-          <option value="政治">政治</option>
-          <option value="経済">経済</option>
-          <option value="社会">社会</option>
-          <option value="天気">天気</option>
-          <option value="国際">国際</option>
-          <option value="芸能">芸能</option>
-          <option value="スポーツ">スポーツ</option>
-          <option value="その他">その他</option>
-        </select>
-      </div>
       <div class="filter-field" id="fetch-scope-field">
-        <label for="fetch-scope-sel">取得範囲</label>
-        <select id="fetch-scope-sel" class="sort-select" onchange="onFetchScopeChange()" title="ニュース取得時にどのキーワードを対象にするか">
+        <label for="fetch-scope-sel">取得するキーワード</label>
+        <select id="fetch-scope-sel" class="sort-select" onchange="onFetchScopeChange()">
           <option value="active">表示中のグループ</option>
           <option value="all">全グループ</option>
         </select>
       </div>
-      <div class="filter-field desktop-only-filters">
-        <label for="count-sel">件数</label>
+      <div class="filter-field">
+        <label for="count-sel" id="count-label">取得件数</label>
         <select id="count-sel" class="sort-select">
           <option value="10">10件</option>
           <option value="20">20件</option>
@@ -379,53 +513,42 @@
           <option value="100">100件</option>
         </select>
       </div>
-      <div class="filter-field desktop-only-filters">
+      <div class="filter-field">
         <label for="auto-refresh-sel">自動更新</label>
-        <select id="auto-refresh-sel" class="sort-select" onchange="onAutoRefreshChange()" title="ページ表示中に現在タブを自動再取得">
+        <select id="auto-refresh-sel" class="sort-select" onchange="onAutoRefreshChange()" title="この画面を開いている間、表示中のタブを自動で取り直す">
           <option value="0">オフ</option>
-          <option value="1">1分</option>
-          <option value="3">3分</option>
-          <option value="5">5分</option>
-          <option value="10">10分</option>
-          <option value="15">15分</option>
-          <option value="30">30分</option>
+          <option value="1">1分ごと</option>
+          <option value="3">3分ごと</option>
+          <option value="5">5分ごと</option>
+          <option value="10">10分ごと</option>
+          <option value="15">15分ごと</option>
+          <option value="30">30分ごと</option>
         </select>
       </div>
     </div>
-    <div class="filter-fields mobile-only" style="margin-top:10px;">
-      <div class="filter-field">
-        <label for="fetch-scope-sel-mobile">取得範囲</label>
-        <select id="fetch-scope-sel-mobile" class="sort-select"></select>
-      </div>
-      <div class="filter-field">
-        <label for="count-sel-mobile">件数</label>
-        <select id="count-sel-mobile" class="sort-select"></select>
-      </div>
-      <div class="filter-field">
-        <label for="auto-refresh-sel-mobile">自動更新</label>
-        <select id="auto-refresh-sel-mobile" class="sort-select"></select>
-      </div>
-    </div>
-    <div class="sheet-actions mobile-only">
-      <button type="button" class="btn" onclick="applyFilterSheet()">適用</button>
+    <div class="sheet-actions">
+      <button type="button" class="btn" onclick="applyFilterSheet()">この条件で表示</button>
     </div>
   </div>
 
-  <div id="progress-bar-wrap">
+  <div id="progress-bar-wrap" aria-hidden="true">
     <div id="progress-bar"></div>
   </div>
 
-  <div id="results">
-    <div id="results-info">下の「取得」を押してください</div>
-  </div>
+  <div id="results" aria-live="polite"></div>
 </main>
 
-<div class="fetch-bar mobile-only">
+<div id="fetch-bar" class="fetch-bar mobile-only">
   <div class="fetch-bar-inner">
-    <div id="fetch-bar-status" class="fetch-bar-status">待機中</div>
-    <button id="main-fetch-btn" class="btn" onclick="handleFetch()">取得</button>
+    <button type="button" class="btn-ghost to-top" onclick="window.scrollTo({ top: 0, behavior: 'smooth' })" aria-label="先頭へ戻る">↑</button>
+    <button id="main-fetch-btn" class="btn" onclick="handleFetch()">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 12a9 9 0 1 1-2.64-6.36"/><path d="M21 3v6h-6"/></svg>
+      <span class="fetch-label">最新に更新</span>
+    </button>
   </div>
 </div>
+
+<div id="toast" class="toast" role="status" aria-live="polite"></div>
 
 <script>
 // ★ プロのコードから移植：安全な文字変換
@@ -456,6 +579,7 @@ let notifyKeywords = safeLoadArray('myNotifyKeywords', []).filter(k => keywords.
 let knownNotifyLinks = new Set(safeLoadArray('myKnownNotifyLinks', []));
 let seededNotifyKeywords = new Set(safeLoadArray('mySeededNotifyKeywords', []).filter(k => notifyKeywords.includes(k)));
 let favorites = safeLoadArray('myFavorites', []).filter(it => it && it.link);
+let quickHistory = safeLoadArray('myQuickHistory', []).filter(q => typeof q === 'string' && q.trim());
 let keywordGroups = (() => {
   try {
     const raw = localStorage.getItem('myKeywordGroups');
@@ -490,7 +614,6 @@ if (countSelEl) {
   countSelEl.value = savedCount;
   countSelEl.addEventListener('change', e => {
     localStorage.setItem('myFetchCount', e.target.value);
-    syncTwinSelect('count-sel', 'count-sel-mobile', e.target.value);
     updateFilterSummary();
   });
 }
@@ -504,13 +627,34 @@ if (periodSelEl) {
   periodSelEl.value = localStorage.getItem('myPeriodFilter') || 'all';
 }
 
-let dataStore = { news: [], major: [], social: [], fav: [] };
+let dataStore = { news: [], major: [], social: [], fav: [], quick: [] };
 let currentTab = 'news';
 let isFetching = false;
 let autoRefreshTimer = null;
 let lastFetchAt = null;
 let lastNewsFetchEmpty = false;
 let newsFetchEmptyMessage = '記事を取得できませんでした。再取得してください';
+// 取得を一度でも試みたタブ（開いたときの自動取得を1回に抑える）
+const fetchedTabs = new Set();
+// 取得を試みた登録キーワード（追加したばかりでまだ取っていない語を見分ける）
+const attemptedKeywords = new Set();
+function missingNewsKeywords() {
+  return keywords.filter(k => !attemptedKeywords.has(k));
+}
+// 直近の取得でAPI呼び出し自体が失敗したタブ
+const fetchErrorTabs = new Set();
+// 画面上部の状態表示：取得中などの一時表示（空なら件数の要約を出す）
+let busyStatus = '';
+// いま取得しているタブ（別タブを見ているときは取得中の表示を出さない）
+let fetchingTab = '';
+let resultsSummary = '';
+// 登録せずに一時的に検索している語（空なら登録キーワードの表示）
+let quickQuery = '';
+let quickFetchEmpty = false;
+// ニュースタブのキーワード絞り込み／主要タブのカテゴリ絞り込み
+let selectedKeyword = 'all';
+let selectedCategory = 'all';
+const MAJOR_CATEGORIES = ['政治', '経済', '社会', '天気', '国際', '芸能', 'スポーツ', 'その他'];
 
 /** GitHub Pages は同じ画面を出すが API は動かない。そのときだけ本番の関数を呼ぶ。 */
 function rssApiOrigin(hostname) {
@@ -529,60 +673,98 @@ function newsEmptyMessage(fetchResult) {
     return 'このページのURLでは記事を取得できません。https://news-rss-brown.vercel.app を開いてください';
   }
   if (statuses.some(s => s === 0)) {
-    return '通信に失敗しました。再取得してください';
+    return '通信に失敗しました。電波の良い場所で再取得してください';
   }
-  return '記事を取得できませんでした。再取得してください';
+  return '記事を取得できませんでした。少し待って再取得してください';
 }
 let settingsOpen = false;
 
-function syncTwinSelect(primaryId, twinId, value) {
-  const twin = document.getElementById(twinId);
-  if (twin && twin.value !== value) twin.value = value;
+/* ---------- 小さな表示部品 ---------- */
+
+let toastTimer = null;
+function showToast(text) {
+  const el = document.getElementById('toast');
+  if (!el) return;
+  el.textContent = text;
+  el.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => el.classList.remove('show'), 2400);
 }
 
-function initMobileFilterSelects() {
-  const countMobile = document.getElementById('count-sel-mobile');
-  const autoMobile = document.getElementById('auto-refresh-sel-mobile');
-  const countMain = document.getElementById('count-sel');
-  const autoMain = document.getElementById('auto-refresh-sel');
-  if (countMobile && countMain) {
-    countMobile.innerHTML = countMain.innerHTML;
-    countMobile.value = countMain.value;
-    countMobile.addEventListener('change', () => {
-      countMain.value = countMobile.value;
-      localStorage.setItem('myFetchCount', countMobile.value);
-      updateFilterSummary();
-    });
-  }
-  if (autoMobile && autoMain) {
-    autoMobile.innerHTML = autoMain.innerHTML;
-    autoMobile.value = autoMain.value;
-    autoMobile.addEventListener('change', () => {
-      autoMain.value = autoMobile.value;
-      onAutoRefreshChange();
-    });
-  }
-  const fetchScopeMobile = document.getElementById('fetch-scope-sel-mobile');
-  const fetchScopeMain = document.getElementById('fetch-scope-sel');
-  if (fetchScopeMobile && fetchScopeMain) {
-    fetchScopeMobile.innerHTML = fetchScopeMain.innerHTML;
-    fetchScopeMobile.value = fetchScopeMain.value;
-    fetchScopeMobile.addEventListener('change', () => {
-      fetchScopeMain.value = fetchScopeMobile.value;
-      onFetchScopeChange();
-    });
-  }
+function renderStatus() {
+  const el = document.getElementById('status-info');
+  if (!el) return;
+  const showBusy = busyStatus && (!fetchingTab || fetchingTab === currentTab);
+  el.innerHTML = showBusy ? escapeHtml(busyStatus) : resultsSummary;
 }
+
+/** 取得中などの一時的な状態を出す。'完了' または空文字で件数の要約に戻す。 */
+function updateStatusText(text) {
+  busyStatus = (text === '完了') ? '' : (text || '');
+  renderStatus();
+}
+
+function setFetchButtonsBusy(busy) {
+  document.querySelectorAll('#main-fetch-btn, #desktop-fetch-btn').forEach(btn => {
+    btn.disabled = busy;
+    btn.classList.toggle('spinning', busy);
+    const label = btn.querySelector('.fetch-label');
+    if (label) label.textContent = busy ? '取得中…' : '最新に更新';
+  });
+}
+
+/** 並び・期間を、選択ボックスの代わりに1タップのボタンで選べるようにする */
+function renderSegments() {
+  document.querySelectorAll('.segmented[data-for]').forEach(seg => {
+    const sel = document.getElementById(seg.dataset.for);
+    if (!sel) return;
+    seg.innerHTML = [...sel.options].map(opt =>
+      `<button type="button" data-value="${escapeHtml(opt.value)}" aria-pressed="${opt.value === sel.value}">${escapeHtml(opt.textContent)}</button>`
+    ).join('');
+    seg.querySelectorAll('button').forEach(b => {
+      b.addEventListener('click', () => {
+        if (sel.value === b.dataset.value) return;
+        sel.value = b.dataset.value;
+        sel.dispatchEvent(new Event('change'));
+      });
+    });
+  });
+}
+
+function formatRelativeTime(d) {
+  const hasDate = d instanceof Date && !isNaN(d.getTime()) && d.getFullYear() > 2000;
+  if (!hasDate) return '';
+  const diffMin = Math.floor((Date.now() - d.getTime()) / 60000);
+  const hm = `${d.getHours()}:${String(d.getMinutes()).padStart(2, '0')}`;
+  if (diffMin < 1) return 'たった今';
+  if (diffMin < 60) return `${diffMin}分前`;
+  if (diffMin < 24 * 60) return `${Math.floor(diffMin / 60)}時間前`;
+  const today = new Date(); today.setHours(0, 0, 0, 0);
+  const yesterday = new Date(today.getTime() - 24 * 3600 * 1000);
+  if (d >= yesterday && d < today) return `昨日 ${hm}`;
+  return `${d.getMonth() + 1}/${d.getDate()} ${hm}`;
+}
+
+function formatFullDate(d) {
+  const hasDate = d instanceof Date && !isNaN(d.getTime()) && d.getFullYear() > 2000;
+  if (!hasDate) return '';
+  return `${d.getFullYear()}/${d.getMonth() + 1}/${d.getDate()} ${d.getHours()}:${String(d.getMinutes()).padStart(2, '0')}`;
+}
+
+/* ---------- 設定パネル・絞り込みシート ---------- */
 
 function toggleSettingsPanel(force) {
   settingsOpen = (typeof force === 'boolean') ? force : !settingsOpen;
   const panel = document.getElementById('settings-panel');
   const btn = document.getElementById('settings-toggle-btn');
+  const label = document.getElementById('settings-toggle-label');
   if (panel) panel.classList.toggle('open', settingsOpen);
   if (btn) {
     btn.classList.toggle('active', settingsOpen);
-    btn.textContent = settingsOpen ? '設定を閉じる' : '設定';
+    btn.setAttribute('aria-expanded', String(settingsOpen));
   }
+  if (label) label.textContent = settingsOpen ? '閉じる' : '設定';
+  if (settingsOpen) window.scrollTo({ top: 0, behavior: 'smooth' });
 }
 
 function openFilterSheet() {
@@ -603,6 +785,7 @@ function applyFilterSheet() {
 }
 
 function onFilterChange() {
+  renderSegments();
   renderQuickKeywordBar();
   updateFilterSummary();
   renderTable();
@@ -612,12 +795,10 @@ function updateFilterSummary() {
   const el = document.getElementById('filter-summary');
   if (!el) return;
   const sortSel = document.getElementById('sort-sel');
-  const countSel = document.getElementById('count-sel');
   const autoSel = document.getElementById('auto-refresh-sel');
   const periodSel = document.getElementById('period-sel');
   const parts = [];
-  if (currentTab === 'fav') parts.push('お気に入り');
-  if (sortSel) {
+  if (currentTab !== 'fav' && sortSel) {
     const opt = sortSel.options[sortSel.selectedIndex];
     if (opt) parts.push(opt.textContent);
   }
@@ -625,25 +806,29 @@ function updateFilterSummary() {
     const opt = periodSel.options[periodSel.selectedIndex];
     if (opt) parts.push(opt.textContent);
   }
-  if (currentTab === 'news') {
-    const kw = document.getElementById('news-kw-sel');
-    if (kw && kw.value !== 'all') parts.push(kw.value);
-    if (activeGroupName) parts.push('G:' + activeGroupName);
-    parts.push(fetchScope === 'all' ? '全G取得' : '表示G取得');
+  if (currentTab === 'news' && !quickQuery) {
+    if (activeGroupName) parts.push('グループ: ' + activeGroupName);
+    if (fetchScope === 'all') parts.push('全グループを取得');
   }
-  if (currentTab === 'major') {
-    const cat = document.getElementById('major-cat-sel');
-    if (cat && cat.value !== 'all') parts.push(cat.value);
-  }
-  if (countSel && currentTab !== 'fav') parts.push(countSel.value + '件');
-  if (autoSel && autoSel.value !== '0' && currentTab !== 'fav') parts.push('自動' + autoSel.value + '分');
+  if (autoSel && autoSel.value !== '0' && currentTab !== 'fav') parts.push('自動更新 ' + autoSel.value + '分');
   el.textContent = parts.join(' · ');
+
+  // スマホの「並び・期間」ボタンに、既定から変えている印を付ける
+  const dot = document.getElementById('filter-dot');
+  const changed = (sortSel && sortSel.value !== 'date') || (periodSel && periodSel.value !== 'all');
+  if (dot) dot.classList.toggle('on', !!changed);
 }
 
 function onPeriodChange() {
   const sel = document.getElementById('period-sel');
   if (sel) localStorage.setItem('myPeriodFilter', sel.value);
   onFilterChange();
+}
+
+function resetPeriodFilter() {
+  const sel = document.getElementById('period-sel');
+  if (sel) sel.value = 'all';
+  onPeriodChange();
 }
 
 function passesPeriodFilter(item, period) {
@@ -660,6 +845,8 @@ function passesPeriodFilter(item, period) {
   }
   return true;
 }
+
+/* ---------- お気に入り ---------- */
 
 function isFavorite(link) {
   return favorites.some(f => f.link === link);
@@ -682,8 +869,9 @@ function toggleFavorite(link, event) {
   const idx = favorites.findIndex(f => f.link === link);
   if (idx !== -1) {
     favorites.splice(idx, 1);
+    showToast('お気に入りから外しました');
   } else {
-    const fromStores = ['news', 'major', 'social']
+    const fromStores = ['news', 'quick', 'major', 'social']
       .flatMap(k => dataStore[k] || [])
       .find(it => it.link === link);
     const item = fromStores || favorites.find(f => f.link === link);
@@ -697,19 +885,20 @@ function toggleFavorite(link, event) {
       source: item.source || '',
       savedAt: new Date().toISOString()
     });
+    showToast('★ お気に入りに保存しました');
   }
   saveFavorites();
   renderTable();
 }
+
+/* ---------- 取得範囲・キーワードグループ ---------- */
 
 function onFetchScopeChange() {
   const sel = document.getElementById('fetch-scope-sel');
   const val = sel ? sel.value : 'active';
   fetchScope = (val === 'all') ? 'all' : 'active';
   localStorage.setItem('myFetchScope', fetchScope);
-  syncTwinSelect('fetch-scope-sel', 'fetch-scope-sel-mobile', fetchScope);
   updateFilterSummary();
-  updateStatusText(fetchScope === 'all' ? '取得範囲: 全グループ' : '取得範囲: 表示中のグループ');
 }
 
 function getAllUniqueKeywords() {
@@ -734,20 +923,24 @@ function isGroupCacheComplete(groupName) {
   return group.keywords.every(kw => articleCacheByKeyword.has(kw));
 }
 
+/** 見出しの正規化で同じ記事（Google と Bing の重複など）を1本にまとめる */
+function dedupeByTitle(items) {
+  const seen = new Set();
+  return items.filter(item => {
+    const norm = displayTitleForDedup(item.title);
+    if (seen.has(norm)) return false;
+    seen.add(norm);
+    return true;
+  });
+}
+
 function mergeNewsFromCache(kwList) {
-  const uniqueNews = [];
-  const seenTitlesMap = new Map();
+  const all = [];
   kwList.forEach(kw => {
     const cached = articleCacheByKeyword.get(kw);
-    if (!cached) return;
-    cached.items.forEach(item => {
-      const norm = displayTitleForDedup(item.title);
-      if (!seenTitlesMap.has(norm)) {
-        seenTitlesMap.set(norm, item);
-        uniqueNews.push(item);
-      }
-    });
+    if (cached) all.push(...cached.items);
   });
+  const uniqueNews = dedupeByTitle(all);
   applyTopicScores(uniqueNews);
   return uniqueNews;
 }
@@ -756,12 +949,20 @@ function refreshNewsDisplayFromCache() {
   dataStore.news = mergeNewsFromCache(keywords);
 }
 
+/** 1語をニュース検索する。登録キーワードの取得とクイック検索の両方がここを通る。 */
+async function fetchKeywordItems(kw, count) {
+  const excludeParam = encodeURIComponent(ngWords.join(','));
+  const res = await fetch(rssApiUrl(`keyword=${encodeURIComponent(kw)}&type=news&exclude=${excludeParam}&count=${count}`));
+  if (!res.ok) return { ok: false, status: res.status, items: [] };
+  const rawData = await res.json();
+  return { ok: true, status: res.status, items: normalizeItems(rawData) };
+}
+
 async function fetchKeywordsForList(keywordList, opts = {}) {
   const silent = !!opts.silent;
   const uniqueList = [...new Set(keywordList.filter(Boolean))];
   if (!uniqueList.length) return { fetchedAny: false, failed: 0, total: 0 };
 
-  const excludeParam = encodeURIComponent(ngWords.join(','));
   const fetchCount = document.getElementById('count-sel').value;
   const label = opts.label || '';
   let fetchedAny = false;
@@ -770,24 +971,28 @@ async function fetchKeywordsForList(keywordList, opts = {}) {
 
   for (let i = 0; i < uniqueList.length; i++) {
     const kw = uniqueList[i];
-    const statusLabel = label ? ` (${label})` : '';
-    updateStatusText(`取得中 ${i + 1}/${uniqueList.length}${statusLabel}`);
+    attemptedKeywords.add(kw);
+    const statusLabel = label ? `（${label}）` : '';
+    updateStatusText(`${opts.fromTimer ? '自動更新中' : '取得中'} ${i + 1}/${uniqueList.length}${statusLabel}`);
     if (!silent) setProgress(5 + Math.round((i / uniqueList.length) * 90));
 
     try {
-      const res = await fetch(rssApiUrl(`keyword=${encodeURIComponent(kw)}&type=news&exclude=${excludeParam}&count=${fetchCount}`));
-      if (!res.ok) {
+      const result = await fetchKeywordItems(kw, fetchCount);
+      if (!result.ok) {
         failed++;
-        httpStatuses.push(res.status);
-        console.error('Fetch failed for:', kw, res.status);
+        httpStatuses.push(result.status);
+        console.error('Fetch failed for:', kw, result.status);
       } else {
-        const rawData = await res.json();
-        const items = normalizeItems(rawData);
-        articleCacheByKeyword.set(kw, { items, fetchedAt: new Date() });
-        if (items.length) fetchedAny = true;
+        articleCacheByKeyword.set(kw, { items: result.items, fetchedAt: new Date() });
+        if (result.items.length) fetchedAny = true;
         else {
           failed++;
           httpStatuses.push(200);
+        }
+        // 取れた分から順に一覧へ出す（全語そろうまで待たせない）
+        if (currentTab === 'news' && !quickQuery && keywords.includes(kw)) {
+          refreshNewsDisplayFromCache();
+          if (dataStore.news.length) renderTable();
         }
       }
     } catch (e) {
@@ -803,9 +1008,9 @@ async function fetchKeywordsForList(keywordList, opts = {}) {
 function renderKeywordGroups() {
   const sel = document.getElementById('kw-group-sel');
   if (!sel) return;
-  let html = '<option value="">（グループを選択）</option>';
+  let html = `<option value="">${keywordGroups.length ? '（グループなしで編集中）' : '（グループはまだありません）'}</option>`;
   keywordGroups.forEach(g => {
-    html += `<option value="${escapeHtml(g.name)}">${escapeHtml(g.name)}（${g.keywords.length}）</option>`;
+    html += `<option value="${escapeHtml(g.name)}">${escapeHtml(g.name)}（${g.keywords.length}語）</option>`;
   });
   sel.innerHTML = html;
   if (activeGroupName && keywordGroups.some(g => g.name === activeGroupName)) {
@@ -813,6 +1018,9 @@ function renderKeywordGroups() {
   } else {
     sel.value = '';
   }
+  const delBtn = document.getElementById('kw-group-del-btn');
+  if (delBtn) delBtn.disabled = !activeGroupName;
+  if (delBtn) delBtn.style.display = keywordGroups.length ? '' : 'none';
 }
 
 function saveKeywordGroups() {
@@ -849,29 +1057,27 @@ function startNewKeywordGroup() {
     refreshNewsDisplayFromCache();
     renderTable();
   }
-  const nameInp = document.getElementById('kw-group-name');
-  if (nameInp) {
-    nameInp.value = '';
-    nameInp.focus();
-  }
-  updateStatusText('新規グループ用にキーワードをクリア。名前を付けて保存してください');
+  document.getElementById('kw-input')?.focus();
+  showToast('空の一覧にしました。キーワードを追加して名前を付けて保存してください');
 }
 
 function saveKeywordGroup() {
   const nameInp = document.getElementById('kw-group-name');
   const name = (nameInp?.value || '').trim();
   if (!name) {
-    updateStatusText('グループ名を入力');
+    showToast('グループ名を入力してください');
+    nameInp?.focus();
     return;
   }
   if (!keywords.length) {
-    updateStatusText('キーワードが空です');
+    showToast('キーワードが空です。先にキーワードを追加してください');
     return;
   }
   // Persist the previous active group before attaching this working list to a new name.
   if (activeGroupName && activeGroupName !== name) syncActiveGroupFromWorking();
   const existing = keywordGroups.find(g => g.name === name);
   if (existing) {
+    if (!confirm(`グループ「${name}」はすでにあります。いまの一覧で上書きしますか？`)) return;
     existing.keywords = [...keywords];
     existing.notify = [...notifyKeywords];
   } else {
@@ -880,8 +1086,7 @@ function saveKeywordGroup() {
   activeGroupName = name;
   if (nameInp) nameInp.value = '';
   saveKeywordGroups();
-  renderKeywordGroupBar();
-  updateStatusText(`グループ「${name}」を保存`);
+  showToast(`グループ「${name}」を保存しました`);
 }
 
 async function switchToGroup(name, opts = {}) {
@@ -898,12 +1103,11 @@ async function switchToGroup(name, opts = {}) {
   saveData();
   saveKeywordGroups();
   renderChips();
-  renderKeywordGroupBar();
   setSelectedKeywordFilter('all', { skipRender: true });
-  updateStatusText(`「${name}」に切替`);
   updateFilterSummary();
 
-  if (currentTab !== 'news') {
+  if (currentTab !== 'news' || quickQuery) {
+    refreshNewsDisplayFromCache();
     renderTable();
     return;
   }
@@ -917,60 +1121,52 @@ async function switchToGroup(name, opts = {}) {
   await handleFetch({ silent: !!opts.silent, groupName: name });
 }
 
-function loadKeywordGroupForEdit() {
+function onGroupSelectChange() {
   const sel = document.getElementById('kw-group-sel');
   const name = sel ? sel.value : '';
   if (!name) {
-    updateStatusText('グループを選んでください');
+    // 「グループなし」を選んだ：一覧はそのまま、どのグループにも紐付けない
+    if (activeGroupName) syncActiveGroupFromWorking();
+    activeGroupName = '';
+    saveKeywordGroups();
     return;
   }
-  const group = keywordGroups.find(g => g.name === name);
-  if (!group) return;
-  if (activeGroupName && activeGroupName !== name) syncActiveGroupFromWorking();
-  keywords = [...group.keywords];
-  notifyKeywords = (group.notify || []).filter(k => keywords.includes(k));
-  seededNotifyKeywords = new Set([...seededNotifyKeywords].filter(k => notifyKeywords.includes(k)));
-  activeGroupName = name;
-  saveData();
-  saveKeywordGroups();
-  renderChips();
-  updateStatusText(`「${name}」を編集用に読み込み`);
+  if (name !== activeGroupName) switchToGroup(name);
 }
 
 function deleteKeywordGroup() {
-  const sel = document.getElementById('kw-group-sel');
-  const name = sel ? sel.value : '';
+  const name = activeGroupName;
   if (!name) {
-    updateStatusText('削除するグループを選択');
+    showToast('削除するグループを選んでください');
     return;
   }
+  const group = keywordGroups.find(g => g.name === name);
+  const n = group ? group.keywords.length : 0;
+  if (!confirm(`グループ「${name}」（${n}語）を削除します。元に戻せません。よろしいですか？`)) return;
   keywordGroups = keywordGroups.filter(g => g.name !== name);
-  const wasActive = activeGroupName === name;
-  if (wasActive) {
-    activeGroupName = '';
-    // Clear leftover working keywords so they don't get re-saved into a new group.
-    keywords = [];
-    notifyKeywords = [];
-    seededNotifyKeywords = new Set();
-    saveData();
-    renderChips();
-  }
+  activeGroupName = '';
+  // Clear leftover working keywords so they don't get re-saved into a new group.
+  keywords = [];
+  notifyKeywords = [];
+  seededNotifyKeywords = new Set();
+  saveData();
+  renderChips();
   saveKeywordGroups();
-  renderKeywordGroupBar();
-  if (wasActive && currentTab === 'news') {
+  if (currentTab === 'news') {
     refreshNewsDisplayFromCache();
     renderTable();
   }
-  updateStatusText(`「${name}」を削除`);
+  showToast(`グループ「${name}」を削除しました`);
 }
 
-document.getElementById('kw-input').addEventListener('keydown', e => { if (e.key === 'Enter') addItem('kw'); });
-document.getElementById('ng-input').addEventListener('keydown', e => { if (e.key === 'Enter') addItem('ng'); });
-function scInputEnterHandler(e) { if (e.key === 'Enter') handleFetch(); }
+document.getElementById('kw-input').addEventListener('keydown', e => { if (e.key === 'Enter' && !e.isComposing) addItem('kw'); });
+document.getElementById('ng-input').addEventListener('keydown', e => { if (e.key === 'Enter' && !e.isComposing) addItem('ng'); });
+document.getElementById('kw-group-name').addEventListener('keydown', e => { if (e.key === 'Enter' && !e.isComposing) saveKeywordGroup(); });
 
 function setProgress(pct) {
   const wrap = document.getElementById('progress-bar-wrap');
   const bar  = document.getElementById('progress-bar');
+  if (fetchingTab && fetchingTab !== currentTab) pct = 0;
   if (pct <= 0) { wrap.style.display = 'none'; bar.style.width = '0%'; return; }
   wrap.style.display = 'block';
   bar.style.width = Math.min(pct, 100) + '%';
@@ -982,34 +1178,40 @@ function showSkeleton(rows = 8) {
       <div class="skeleton-block sk-title"></div>
       <div class="skeleton-block sk-meta"></div>
     </div>`).join('');
-  document.getElementById('results').innerHTML = `<div class="skeleton-wrap">${skRows}</div>`;
+  document.getElementById('results').innerHTML = `<div class="skeleton-wrap" aria-label="読み込み中">${skRows}</div>`;
+}
+
+/* ---------- タブ ---------- */
+
+function needsAutoFetch(tab) {
+  if (tab === 'fav') return false;
+  if (tab === 'news' && quickQuery) return !fetchedTabs.has('quick:' + quickQuery);
+  if (tab === 'news' && !keywords.length) return false;
+  return !fetchedTabs.has(tab) && !(dataStore[tab] && dataStore[tab].length);
 }
 
 function switchTab(t) {
   currentTab = t;
-  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
-  document.getElementById('tab-'+t)?.classList.add('active');
+  document.querySelectorAll('.tab-btn').forEach(b => {
+    const on = b.id === 'tab-' + t;
+    b.classList.toggle('active', on);
+    b.setAttribute('aria-selected', String(on));
+  });
 
-  const kwSection = document.getElementById('kw-section');
-  if (kwSection) kwSection.style.display = (t === 'news') ? 'block' : 'none';
-
-  document.getElementById('mj-card')?.classList.toggle('active', t === 'major');
+  document.getElementById('news-card')?.classList.toggle('active', t === 'news');
   document.getElementById('sc-card')?.classList.toggle('active', t === 'social');
 
   const fetchScopeField = document.getElementById('fetch-scope-field');
-  if (fetchScopeField) fetchScopeField.style.display = (t === 'news') ? '' : 'none';
+  if (fetchScopeField) fetchScopeField.style.display = (t === 'news' && !quickQuery) ? '' : 'none';
+  const countLabel = document.getElementById('count-label');
+  if (countLabel) countLabel.textContent = (t === 'news' && !quickQuery) ? '1キーワードあたりの件数' : '取得件数';
 
   // ニュース以外では設定を自動で閉じる（記事を優先）
   if (t !== 'news' && settingsOpen) toggleSettingsPanel(false);
 
   const sortOptKeyword = document.getElementById('sort-opt-keyword');
-  if (sortOptKeyword) sortOptKeyword.textContent = (t === 'news') ? 'キーワード順' : '出典順';
-
-  const newsKwField = document.getElementById('news-kw-field');
-  if (newsKwField) newsKwField.style.display = (t === 'news') ? '' : 'none';
-
-  const majorCatField = document.getElementById('major-cat-field');
-  if (majorCatField) majorCatField.style.display = (t === 'major') ? '' : 'none';
+  if (sortOptKeyword) sortOptKeyword.textContent = (t === 'news' && !quickQuery) ? 'キーワード順' : '出典順';
+  renderSegments();
 
   const fetchBtns = [
     document.getElementById('main-fetch-btn'),
@@ -1018,69 +1220,60 @@ function switchTab(t) {
   fetchBtns.forEach(btn => {
     btn.style.display = (t === 'fav') ? 'none' : '';
   });
-  const fetchBarStatus = document.getElementById('fetch-bar-status');
-  if (fetchBarStatus && t === 'fav') fetchBarStatus.textContent = 'お気に入り';
+  document.getElementById('fetch-bar')?.classList.toggle('hidden', t === 'fav');
 
-  const scInp = document.getElementById('sc-input');
-  if (scInp) {
-    scInp.removeEventListener('keydown', scInputEnterHandler);
-    if (t === 'social') scInp.addEventListener('keydown', scInputEnterHandler);
-  }
+  if (isFetching && fetchingTab !== t) setProgress(0);
+  renderQuickBanner();
   renderKeywordGroupBar();
   renderQuickKeywordBar();
+  renderCategoryBar();
   updateFilterSummary();
   renderTable();
+  if (needsAutoFetch(t)) handleFetch();
 }
 
 function renderKeywordGroupBar() {
   const bar = document.getElementById('quick-group-bar');
   const scroll = document.getElementById('quick-group-scroll');
-  const kwBar = document.getElementById('quick-kw-bar');
   if (!bar || !scroll) return;
 
-  const show = currentTab === 'news' && keywordGroups.length > 0;
+  const show = currentTab === 'news' && !quickQuery && keywordGroups.length > 0;
   bar.classList.toggle('visible', show);
-  if (kwBar) kwBar.classList.toggle('visible', currentTab === 'news');
-  if (kwBar) kwBar.style.top = show ? '96px' : '48px';
   if (!show) return;
 
   const chips = keywordGroups.map(g => {
     const on = activeGroupName === g.name;
-    return `<button type="button" class="quick-group-chip${on ? ' active' : ''}" data-group="${escapeHtml(g.name)}" aria-pressed="${on}">${escapeHtml(g.name)} (${g.keywords.length})</button>`;
+    return `<button type="button" class="pill group${on ? ' active' : ''}" data-group="${escapeHtml(g.name)}" aria-pressed="${on}">${escapeHtml(g.name)}<span class="count">${g.keywords.length}</span></button>`;
   });
   scroll.innerHTML = chips.join('');
 
-  scroll.querySelectorAll('.quick-group-chip').forEach(btn => {
+  scroll.querySelectorAll('.pill').forEach(btn => {
     btn.addEventListener('click', () => {
       const name = btn.getAttribute('data-group');
       if (name && name !== activeGroupName) switchToGroup(name);
     });
   });
 
-  const active = scroll.querySelector('.quick-group-chip.active');
-  if (active && typeof active.scrollIntoView === 'function') {
-    active.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' });
-  }
+  const active = scroll.querySelector('.pill.active');
+  if (active) scroll.scrollLeft = Math.max(0, active.offsetLeft - scroll.clientWidth / 2 + active.clientWidth / 2);
 }
 
 function getSelectedKeywordFilter() {
-  const sel = document.getElementById('news-kw-sel');
-  return sel ? sel.value : 'all';
+  return selectedKeyword;
 }
 
 function setSelectedKeywordFilter(value, opts = {}) {
-  const sel = document.getElementById('news-kw-sel');
-  if (sel) sel.value = value;
+  selectedKeyword = value || 'all';
   renderQuickKeywordBar();
   updateFilterSummary();
   if (!opts.skipRender) renderTable();
 }
 
 function selectQuickKeyword(value) {
+  if (quickQuery) exitQuickSearch();
   if (currentTab !== 'news') switchTab('news');
   setSelectedKeywordFilter(value);
-  // 選択中チップが見える位置へスクロール
-  const active = document.querySelector('.quick-kw-chip.active');
+  const active = document.querySelector('#quick-kw-scroll .pill.active');
   if (active && typeof active.scrollIntoView === 'function') {
     active.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' });
   }
@@ -1090,27 +1283,28 @@ function renderQuickKeywordBar() {
   const bar = document.getElementById('quick-kw-bar');
   const scroll = document.getElementById('quick-kw-scroll');
   if (!bar || !scroll) return;
-  bar.classList.toggle('visible', currentTab === 'news');
-  if (currentTab !== 'news') return;
+  const show = currentTab === 'news' && !quickQuery && keywords.length > 0;
+  bar.classList.toggle('visible', show);
+  if (!show) return;
 
-  const currentVal = getSelectedKeywordFilter();
-  const safeCurrent = (currentVal === 'all' || keywords.includes(currentVal)) ? currentVal : 'all';
-  if (safeCurrent !== currentVal) {
-    const sel = document.getElementById('news-kw-sel');
-    if (sel) sel.value = 'all';
-  }
+  if (selectedKeyword !== 'all' && !keywords.includes(selectedKeyword)) selectedKeyword = 'all';
 
+  // 取得済みの件数を添える（どの語に記事が多いかが一目でわかる）
+  const countFor = kw => dataStore.news.filter(n => n.keyword === kw).length;
+  const hasData = dataStore.news.length > 0;
   const chips = [
-    `<button type="button" class="quick-kw-chip${safeCurrent === 'all' ? ' active' : ''}" data-kw="all" aria-pressed="${safeCurrent === 'all'}">すべて</button>`
+    `<button type="button" class="pill${selectedKeyword === 'all' ? ' active' : ''}" data-kw="all" aria-pressed="${selectedKeyword === 'all'}">すべて</button>`
   ];
   keywords.forEach(kw => {
-    const on = safeCurrent === kw;
+    const on = selectedKeyword === kw;
+    const bell = notifyKeywords.includes(kw) ? '<span aria-label="通知オン">🔔</span>' : '';
+    const n = hasData ? `<span class="count">${countFor(kw)}</span>` : '';
     chips.push(
-      `<button type="button" class="quick-kw-chip${on ? ' active' : ''}" data-kw="${escapeHtml(kw)}" aria-pressed="${on}">${escapeHtml(kw)}</button>`
+      `<button type="button" class="pill${on ? ' active' : ''}" data-kw="${escapeHtml(kw)}" aria-pressed="${on}">${bell}${escapeHtml(kw)}${n}</button>`
     );
   });
   scroll.innerHTML = chips.join('');
-  scroll.querySelectorAll('.quick-kw-chip').forEach(btn => {
+  scroll.querySelectorAll('.pill').forEach(btn => {
     btn.addEventListener('click', () => {
       const raw = btn.getAttribute('data-kw') || 'all';
       selectQuickKeyword(raw);
@@ -1118,38 +1312,55 @@ function renderQuickKeywordBar() {
   });
 }
 
-function updateNewsKwSelect() {
-  const sel = document.getElementById('news-kw-sel');
-  if (!sel) return;
-  const currentVal = sel.value; 
-  let html = '<option value="all">全キーワード</option>';
-  keywords.forEach(kw => {
-    html += `<option value="${escapeHtml(kw)}">${escapeHtml(kw)}</option>`;
+function renderCategoryBar() {
+  const bar = document.getElementById('major-cat-bar');
+  const scroll = document.getElementById('major-cat-scroll');
+  if (!bar || !scroll) return;
+  const show = currentTab === 'major' && dataStore.major.length > 0;
+  bar.classList.toggle('visible', show);
+  if (!show) return;
+  const counts = new Map();
+  dataStore.major.forEach(it => {
+    const c = categorizeMajor(it);
+    counts.set(c, (counts.get(c) || 0) + 1);
   });
-  sel.innerHTML = html;
-  if (keywords.includes(currentVal)) {
-    sel.value = currentVal;
-  } else {
-    sel.value = 'all';
-  }
-  renderQuickKeywordBar();
+  const cats = MAJOR_CATEGORIES.filter(c => counts.get(c));
+  if (selectedCategory !== 'all' && !cats.includes(selectedCategory)) selectedCategory = 'all';
+  const chips = [`<button type="button" class="pill${selectedCategory === 'all' ? ' active' : ''}" data-cat="all" aria-pressed="${selectedCategory === 'all'}">すべて</button>`]
+    .concat(cats.map(c => `<button type="button" class="pill${selectedCategory === c ? ' active' : ''}" data-cat="${escapeHtml(c)}" aria-pressed="${selectedCategory === c}">${escapeHtml(c)}<span class="count">${counts.get(c)}</span></button>`));
+  scroll.innerHTML = chips.join('');
+  scroll.querySelectorAll('.pill').forEach(btn => {
+    btn.addEventListener('click', () => {
+      selectedCategory = btn.dataset.cat || 'all';
+      renderCategoryBar();
+      renderTable();
+    });
+  });
+}
+
+function categorizeMajor(item) {
+  const autoCat = autoCategorize(item.title);
+  return autoCat !== 'その他' ? autoCat : (item.category || 'その他');
 }
 
 function renderChips() {
   document.getElementById('chips-kw').innerHTML = keywords.map((k, i) => {
     const on = notifyKeywords.includes(k);
     return `<span class="chip${on ? ' has-notify' : ''}">${escapeHtml(k)}` +
-      `<button type="button" class="chip-bell${on ? ' on' : ''}" title="${on ? '新着通知オン' : '新着通知オフ'}" aria-label="${escapeHtml(k)}の新着通知を${on ? 'オフ' : 'オン'}" onclick="toggleNotifyKeyword(${i})">🔔</button>` +
+      `<button type="button" class="chip-bell${on ? ' on' : ''}" title="${on ? '新着通知オン' : '新着通知オフ'}" aria-pressed="${on}" aria-label="${escapeHtml(k)}の新着通知" onclick="toggleNotifyKeyword(${i})">🔔</button>` +
       `<button type="button" class="chip-del" aria-label="${escapeHtml(k)}を削除" onclick="removeItem('kw',${i})">×</button></span>`;
   }).join('');
   document.getElementById('chips-ng').innerHTML = ngWords.map((k, i) =>
     `<span class="chip chip-ng">${escapeHtml(k)}<button type="button" class="chip-del" aria-label="${escapeHtml(k)}を削除" onclick="removeItem('ng',${i})">×</button></span>`).join('');
-  updateNewsKwSelect();
+  renderQuickKeywordBar();
   updateNotifyStatusUI();
   renderKeywordGroups();
   renderKeywordGroupBar();
+  renderQuickBanner();
   updateFilterSummary();
 }
+
+/* ---------- 新着通知 ---------- */
 
 function toggleNotifyKeyword(i) {
   const kw = keywords[i];
@@ -1192,7 +1403,7 @@ function updateNotifyStatusUI() {
   const btn = document.getElementById('notify-perm-btn');
   if (!el) return;
   if (typeof Notification === 'undefined') {
-    el.textContent = '通知: 非対応';
+    el.textContent = '通知: このブラウザは非対応';
     el.className = 'notify-status warn';
     if (btn) btn.style.display = 'none';
     return;
@@ -1200,15 +1411,15 @@ function updateNotifyStatusUI() {
   const perm = Notification.permission;
   if (perm === 'granted') {
     const n = notifyKeywords.length;
-    el.textContent = n > 0 ? `通知: 許可済（${n}語）` : '通知: 許可済（🔔で対象指定）';
+    el.textContent = n > 0 ? `通知: 許可済み（${n}語）` : '通知: 許可済み（🔔で対象を選択）';
     el.className = 'notify-status ok';
     if (btn) btn.style.display = 'none';
   } else if (perm === 'denied') {
-    el.textContent = '通知: ブラウザで拒否中';
+    el.textContent = '通知: ブラウザの設定で拒否されています';
     el.className = 'notify-status warn';
     if (btn) btn.style.display = 'none';
   } else {
-    el.textContent = notifyKeywords.length > 0 ? '通知: 許可が必要' : '通知: 未設定';
+    el.textContent = notifyKeywords.length > 0 ? '通知: 許可が必要です' : '通知: 未設定';
     el.className = 'notify-status' + (notifyKeywords.length > 0 ? ' warn' : '');
     if (btn) btn.style.display = '';
   }
@@ -1282,17 +1493,10 @@ function notifyNewArticles(items) {
 function formatLastFetch() {
   if (!lastFetchAt) return '';
   const d = lastFetchAt;
-  return `最終 ${d.getHours()}:${String(d.getMinutes()).padStart(2, '0')}`;
+  return `${d.getHours()}:${String(d.getMinutes()).padStart(2, '0')} 更新`;
 }
 
-function updateStatusText(text) {
-  const el = document.getElementById('status-info');
-  const bar = document.getElementById('fetch-bar-status');
-  const suffix = formatLastFetch();
-  const full = suffix && text === '完了' ? `完了 · ${suffix}` : text;
-  if (el) el.textContent = full;
-  if (bar) bar.textContent = text;
-}
+/* ---------- 自動更新 ---------- */
 
 function clearAutoRefreshTimer() {
   if (autoRefreshTimer) {
@@ -1316,27 +1520,34 @@ function onAutoRefreshChange() {
   const sel = document.getElementById('auto-refresh-sel');
   const val = sel ? sel.value : '0';
   localStorage.setItem('myAutoRefreshMin', val);
-  syncTwinSelect('auto-refresh-sel', 'auto-refresh-sel-mobile', val);
   scheduleAutoRefresh();
   updateFilterSummary();
-  const mins = parseInt(val, 10);
-  if (mins > 0) updateStatusText(`自動更新: ${mins}分`);
-  else updateStatusText('自動更新: オフ');
 }
+
+/* ---------- キーワード・NGワードの追加と削除 ---------- */
 
 function addItem(type) {
   const inp = document.getElementById(type + '-input');
   if (!inp) return;
   const v = inp.value.trim();
-  if (!v) return;
-  if (type === 'kw' && !keywords.includes(v)) {
+  if (!v) { inp.focus(); return; }
+  if (type === 'kw') {
+    if (keywords.includes(v)) { showToast(`「${v}」は登録済みです`); inp.value = ''; return; }
     keywords.push(v);
     syncActiveGroupFromWorking();
+    showToast(`「${v}」を追加しました`);
+    // 追加した語の記事だけ先に取ってくる（全語の取り直しは待たせない）
+    // 取得中なら、終わったあとに handleFetch が続けて取る
+    if (!isFetching && currentTab === 'news' && fetchedTabs.has('news')) setTimeout(() => handleFetch({ keywords: [v], silent: true }), 0);
   }
-  if (type === 'ng' && !ngWords.includes(v)) ngWords.push(v);
+  if (type === 'ng') {
+    if (!ngWords.includes(v)) ngWords.push(v);
+    showToast(`「${v}」を含む記事を表示しません（次の取得から）`);
+  }
   saveData();
   renderChips();
   inp.value = '';
+  inp.focus();
 }
 
 function removeItem(type, i) {
@@ -1347,6 +1558,10 @@ function removeItem(type, i) {
     seededNotifyKeywords.delete(removed);
     saveKnownNotifyLinks();
     syncActiveGroupFromWorking();
+    if (currentTab === 'news' && !quickQuery) {
+      refreshNewsDisplayFromCache();
+      renderTable();
+    }
   }
   if (type === 'ng') ngWords.splice(i, 1);
   saveData();
@@ -1367,6 +1582,142 @@ function markAsVisited(link) {
     renderTable();
   }
 }
+
+/* ---------- クイック検索（登録せずに1語で探す） ---------- */
+
+function saveQuickHistory() {
+  if (quickHistory.length > 8) quickHistory = quickHistory.slice(0, 8);
+  localStorage.setItem('myQuickHistory', JSON.stringify(quickHistory));
+}
+
+let quickInputFocused = false;
+function renderQuickRecent() {
+  const box = document.getElementById('quick-recent');
+  const inp = document.getElementById('quick-input');
+  if (!box) return;
+  const show = quickHistory.length > 0 && quickInputFocused && !(inp && inp.value.trim());
+  box.hidden = !show;
+  if (!show) return;
+  box.innerHTML = '<span class="search-recent-label">最近の検索</span>' +
+    quickHistory.map(q => `<button type="button" class="recent-chip" data-q="${escapeHtml(q)}">${escapeHtml(q)}</button>`).join('') +
+    '<button type="button" class="recent-chip" data-clear="1" style="border:none; color:var(--faint);">履歴を消す</button>';
+  box.querySelectorAll('button').forEach(b => {
+    // blur より先に反応させる（押した瞬間に候補が消えないように）
+    b.addEventListener('pointerdown', e => e.preventDefault());
+    b.addEventListener('click', () => {
+      if (b.dataset.clear) {
+        quickHistory = [];
+        saveQuickHistory();
+        renderQuickRecent();
+        return;
+      }
+      if (inp) inp.value = b.dataset.q;
+      runQuickSearch(b.dataset.q);
+    });
+  });
+}
+
+function updateQuickClearButton() {
+  const inp = document.getElementById('quick-input');
+  document.getElementById('quick-clear-btn')?.classList.toggle('visible', !!(inp && inp.value));
+}
+
+function clearQuickInput() {
+  const inp = document.getElementById('quick-input');
+  if (inp) { inp.value = ''; inp.focus(); }
+  updateQuickClearButton();
+  if (quickQuery) exitQuickSearch();
+  renderQuickRecent();
+}
+
+function setQuickQueryInUrl(q) {
+  try {
+    const url = new URL(location.href);
+    if (q) url.searchParams.set('q', q); else url.searchParams.delete('q');
+    history.replaceState(null, '', url.pathname + url.search + url.hash);
+  } catch (e) { /* ignore */ }
+}
+
+function renderQuickBanner() {
+  const banner = document.getElementById('quick-banner');
+  if (!banner) return;
+  const show = currentTab === 'news' && !!quickQuery;
+  banner.classList.toggle('visible', show);
+  if (!show) return;
+  const label = document.getElementById('quick-banner-label');
+  if (label) label.innerHTML = `「<strong>${escapeHtml(quickQuery)}</strong>」の検索結果`;
+  const reg = document.getElementById('quick-register-btn');
+  if (reg) {
+    const registered = keywords.includes(quickQuery);
+    reg.disabled = registered;
+    reg.textContent = registered ? '✓ 登録済み' : '＋ キーワードに登録';
+  }
+}
+
+function runQuickSearch(value) {
+  const inp = document.getElementById('quick-input');
+  const q = String(value ?? (inp ? inp.value : '')).trim();
+  if (!q) { inp?.focus(); return; }
+  if (inp) { inp.value = q; inp.blur(); }
+  quickInputFocused = false;
+  updateQuickClearButton();
+  quickHistory = [q, ...quickHistory.filter(h => h !== q)];
+  saveQuickHistory();
+  renderQuickRecent();
+  quickQuery = q;
+  dataStore.quick = [];
+  quickFetchEmpty = false;
+  setQuickQueryInUrl(q);
+  switchTab('news'); // needsAutoFetch がクイック検索の取得を始める
+}
+
+function exitQuickSearch(opts = {}) {
+  quickQuery = '';
+  dataStore.quick = [];
+  quickFetchEmpty = false;
+  const inp = document.getElementById('quick-input');
+  if (inp) inp.value = '';
+  updateQuickClearButton();
+  setQuickQueryInUrl('');
+  if (!opts.skipRender) switchTab(currentTab);
+}
+
+function registerQuickKeyword() {
+  const q = quickQuery;
+  if (!q || keywords.includes(q)) return;
+  keywords.push(q);
+  syncActiveGroupFromWorking();
+  saveData();
+  // いま見ている検索結果をそのまま登録キーワードの取得結果として使う
+  if (dataStore.quick.length) {
+    articleCacheByKeyword.set(q, { items: dataStore.quick.map(it => ({ ...it, keyword: q })), fetchedAt: new Date() });
+    refreshNewsDisplayFromCache();
+  }
+  renderChips();
+  showToast(`「${q}」を登録キーワードに追加しました${activeGroupName ? `（グループ「${activeGroupName}」）` : ''}`);
+}
+
+async function fetchQuickSearch(opts) {
+  const q = quickQuery;
+  const count = Math.max(30, parseInt(document.getElementById('count-sel').value, 10) || 20);
+  updateStatusText(`「${q}」を検索中…`);
+  if (!opts.silent) setProgress(40);
+  fetchedTabs.add('quick:' + q);
+  const result = await fetchKeywordItems(q, count);
+  if (q !== quickQuery) return; // 検索中に別の語へ切り替わった
+  if (!result.ok) {
+    quickFetchEmpty = true;
+    newsFetchEmptyMessage = newsEmptyMessage({ httpStatuses: [result.status] });
+    dataStore.quick = [];
+    return;
+  }
+  const items = dedupeByTitle(result.items);
+  applyTopicScores(items);
+  dataStore.quick = items;
+  quickFetchEmpty = items.length === 0;
+}
+
+/* ---------- 主要タブのカテゴリ判定・話題順 ---------- */
 
 function autoCategorize(title) {
   const scores = { '政治':0, '経済':0, '国際':0, 'スポーツ':0, '芸能':0, '社会':0, '天気':0 };
@@ -1496,36 +1847,43 @@ function displayTitleForDedup(title) {
   return norm.replace(/[^\p{L}\p{N}]/gu, '');
 }
 
+/* ---------- 取得 ---------- */
+
 async function handleFetch(opts = {}) {
   if (currentTab === 'fav') {
     renderTable();
     return;
   }
-  const silent = !!opts.silent;
-  const btns = [
-    document.getElementById('main-fetch-btn'),
-    document.getElementById('desktop-fetch-btn')
-  ].filter(Boolean);
   if (isFetching) return;
+  const silent = !!opts.silent;
+  const tab = currentTab;
   isFetching = true;
-  btns.forEach(btn => { btn.disabled = true; });
+  fetchingTab = tab;
+  setFetchButtonsBusy(true);
+  fetchErrorTabs.delete(tab);
 
   const excludeParam = encodeURIComponent(ngWords.join(','));
   const fetchCount   = document.getElementById('count-sel').value;
 
+  const hasVisibleData = tab === 'news'
+    ? (quickQuery ? dataStore.quick.length : dataStore.news.length)
+    : (dataStore[tab] || []).length;
   if (!silent) {
-    showSkeleton();
+    if (!hasVisibleData) showSkeleton();
     setProgress(5);
   }
 
   try {
-    if (currentTab === 'news') {
+    if (tab === 'news' && quickQuery) {
+      await fetchQuickSearch({ silent });
+    } else if (tab === 'news') {
+      fetchedTabs.add('news');
       const keywordsToFetch = getKeywordsForFetch(opts);
       const scopeLabel = opts.groupName
         ? opts.groupName
-        : (fetchScope === 'all' ? '全グループ' : (activeGroupName || '表示中'));
+        : (fetchScope === 'all' ? '全グループ' : (activeGroupName || ''));
 
-      const fetchResult = await fetchKeywordsForList(keywordsToFetch, { silent, label: scopeLabel });
+      const fetchResult = await fetchKeywordsForList(keywordsToFetch, { silent, label: scopeLabel, fromTimer: opts.fromTimer });
       refreshNewsDisplayFromCache();
       lastNewsFetchEmpty = !!(fetchResult && fetchResult.total && !fetchResult.fetchedAny);
       newsFetchEmptyMessage = newsEmptyMessage(fetchResult);
@@ -1533,42 +1891,69 @@ async function handleFetch(opts = {}) {
       if (!silent) setProgress(95);
 
     } else {
-      const type = currentTab;
+      fetchedTabs.add(tab);
       const scInput = document.getElementById('sc-input');
-      const kw = (type === 'social' && scInput) ? scInput.value.trim() : "";
-      updateStatusText(opts.fromTimer ? '自動更新中...' : '取得中...');
+      const kw = (tab === 'social' && scInput) ? scInput.value.trim() : "";
+      updateStatusText(opts.fromTimer ? '自動更新中…' : '取得中…');
       if (!silent) setProgress(40);
-      const res = await fetch(rssApiUrl(`type=${type}&keyword=${encodeURIComponent(kw)}&exclude=${excludeParam}&count=${fetchCount}`));
+      const res = await fetch(rssApiUrl(`type=${tab}&keyword=${encodeURIComponent(kw)}&exclude=${excludeParam}&count=${fetchCount}`));
       if (!res.ok) throw new Error('通信エラー');
       const rawData = await res.json();
-      let items = normalizeItems(rawData);
+      // 複数の媒体が同じ見出しを配信していることがあるので1本にまとめる
+      let items = dedupeByTitle(normalizeItems(rawData));
       applyTopicScores(items);
-      dataStore[type] = items;
+      dataStore[tab] = items;
       if (!silent) setProgress(95);
     }
 
     lastFetchAt = new Date();
-    updateStatusText(lastNewsFetchEmpty && currentTab === 'news' ? `⚠️ ${newsFetchEmptyMessage}` : '完了');
+    updateStatusText('完了');
     if (!silent) {
       setProgress(100);
       setTimeout(() => setProgress(0), 600);
     }
 
   } catch (error) {
-    updateStatusText('⚠️ 取得エラー');
-    if (!silent) {
-      setProgress(0);
-      document.getElementById('results').innerHTML = '<div id="results-info">通信が混み合っています。少し待って再取得してください。</div>';
-    }
+    fetchErrorTabs.add(tab);
+    updateStatusText('');
+    if (!silent) setProgress(0);
+    // 前回の記事が残っているときは一覧を消さず、失敗だけを知らせる
+    if (hasVisibleData) showToast('更新に失敗しました。前回の記事を表示しています');
   } finally {
     isFetching = false;
-    [
-      document.getElementById('main-fetch-btn'),
-      document.getElementById('desktop-fetch-btn')
-    ].filter(Boolean).forEach(btn => { btn.disabled = false; });
+    fetchingTab = '';
+    setFetchButtonsBusy(false);
+    if (tab === 'major') renderCategoryBar();
+    renderQuickKeywordBar();
     renderTable();
+    // 取得中に別のタブへ移った・クイック検索を始めた場合は、続けてそちらを取得する
+    if (needsAutoFetch(currentTab)) setTimeout(() => handleFetch(), 0);
+    else if (currentTab === 'news' && !quickQuery && fetchedTabs.has('news') && missingNewsKeywords().length) {
+      // 取得中に追加された語やグループ切替で増えた語を、続けて取ってくる
+      setTimeout(() => { if (!isFetching) handleFetch({ keywords: missingNewsKeywords(), silent: true }); }, 0);
+    }
   }
 }
+
+/* ---------- 一覧の描画 ---------- */
+
+function renderEmpty(icon, message, sub, actions = []) {
+  const buttons = actions.map((a, i) =>
+    `<button type="button" class="${i === 0 ? 'btn' : 'btn-ghost'}" data-empty-action="${i}">${escapeHtml(a.label)}</button>`
+  ).join('');
+  document.getElementById('results').innerHTML = `
+    <div class="empty-state">
+      <span class="empty-icon" aria-hidden="true">${icon}</span>
+      <p>${escapeHtml(message)}</p>
+      ${sub ? `<p>${escapeHtml(sub)}</p>` : ''}
+      ${buttons ? `<div class="empty-actions">${buttons}</div>` : ''}
+    </div>`;
+  document.querySelectorAll('[data-empty-action]').forEach(b => {
+    b.addEventListener('click', () => actions[Number(b.dataset.emptyAction)].run());
+  });
+}
+
+const retryAction = { label: 'もう一度取得する', run: () => handleFetch() };
 
 function renderTable() {
   if (currentTab === 'fav') {
@@ -1578,58 +1963,62 @@ function renderTable() {
     }));
   }
 
-  let displayData = dataStore[currentTab];
+  const inQuick = currentTab === 'news' && !!quickQuery;
+  let displayData = inQuick ? dataStore.quick : dataStore[currentTab];
+
   if (!displayData || displayData.length === 0) {
-    const emptyMsg = currentTab === 'fav'
-      ? 'お気に入りはまだありません。記事左の★で追加できます'
-      : (currentTab === 'news' && lastNewsFetchEmpty)
-        ? newsFetchEmptyMessage
-        : '下の「取得」を押してください';
-    if (!document.getElementById('results-info') || document.getElementById('results-info').textContent !== '通信が混み合っています。少し待って再取得してください。') {
-       document.getElementById('results').innerHTML = `<div id="results-info">${emptyMsg}</div>`;
+    resultsSummary = '';
+    renderStatus();
+    if (isFetching && document.querySelector('#results .skeleton-wrap')) return;
+    if (currentTab === 'fav') {
+      renderEmpty('☆', 'お気に入りはまだありません', '記事の右にある☆をタップすると、ここに保存されます');
+    } else if (fetchErrorTabs.has(currentTab)) {
+      renderEmpty('⚠️', '通信に失敗しました', '電波の状態を確かめて、もう一度お試しください', [retryAction]);
+    } else if (inQuick && quickFetchEmpty) {
+      renderEmpty('🔍', `「${quickQuery}」の記事は見つかりませんでした`, '言い回しを変えるか、語を短くして試してください', [
+        { label: '別の語で検索', run: () => { const i = document.getElementById('quick-input'); if (i) { i.value = ''; i.focus(); } } },
+        { label: '登録キーワードに戻る', run: () => exitQuickSearch() }
+      ]);
+    } else if (currentTab === 'news' && !inQuick && !keywords.length) {
+      renderEmpty('🗝️', '登録キーワードがありません', '上の検索欄なら登録せずに探せます。毎回見たい語は設定から登録してください', [
+        { label: 'キーワードを登録する', run: () => { toggleSettingsPanel(true); document.getElementById('kw-input')?.focus(); } }
+      ]);
+    } else if (currentTab === 'news' && !inQuick && lastNewsFetchEmpty) {
+      renderEmpty('📭', newsFetchEmptyMessage, '', [retryAction]);
+    } else {
+      renderEmpty('📰', 'まだ記事を読み込んでいません', '', [{ label: '記事を読み込む', run: () => handleFetch() }]);
     }
     return;
   }
 
   const period = document.getElementById('period-sel')?.value || 'all';
+  const beforePeriod = displayData.length;
   displayData = displayData.filter(n => passesPeriodFilter(n, period));
 
-  if (currentTab === 'news') {
-    const kwFilter = document.getElementById('news-kw-sel').value;
-    if (kwFilter !== 'all') {
-      displayData = displayData.filter(n => n.keyword === kwFilter);
-    }
-    if (displayData.length === 0 && document.getElementById('results-info')?.textContent !== '通信が混み合っています。少し待って再取得してください。') {
-      document.getElementById('results').innerHTML = `<div id="results-info">条件に合う記事はありません</div>`;
-      return;
-    }
+  if (currentTab === 'news' && !inQuick && selectedKeyword !== 'all') {
+    displayData = displayData.filter(n => n.keyword === selectedKeyword);
   }
 
   if (currentTab === 'major') {
-    displayData.forEach(item => {
-      const autoCat = autoCategorize(item.title);
-      if (autoCat !== 'その他') {
-        item.category = autoCat;
-      } else {
-        item.category = item.category || 'その他';
-      }
-    });
-
-    const catFilter = document.getElementById('major-cat-sel').value;
-    if (catFilter !== 'all') displayData = displayData.filter(n => n.category === catFilter);
-    if (displayData.length === 0) {
-      document.getElementById('results').innerHTML = `<div id="results-info">条件に合う記事はありません</div>`;
-      return;
-    }
+    displayData.forEach(item => { item.category = categorizeMajor(item); });
+    if (selectedCategory !== 'all') displayData = displayData.filter(n => n.category === selectedCategory);
   }
 
   if (displayData.length === 0) {
-    document.getElementById('results').innerHTML = `<div id="results-info">条件に合う記事はありません</div>`;
+    resultsSummary = '<strong>0件</strong>';
+    renderStatus();
+    const actions = [];
+    if (period !== 'all') actions.push({ label: '期間を「すべて」にする', run: resetPeriodFilter });
+    if (currentTab === 'news' && !inQuick && selectedKeyword !== 'all') actions.push({ label: 'すべてのキーワードを表示', run: () => setSelectedKeywordFilter('all') });
+    if (currentTab === 'major' && selectedCategory !== 'all') actions.push({ label: 'すべてのカテゴリを表示', run: () => { selectedCategory = 'all'; renderCategoryBar(); renderTable(); } });
+    const sub = (period !== 'all' && beforePeriod > 0) ? `期間を広げると ${beforePeriod}件 あります` : '';
+    renderEmpty('🔎', '条件に合う記事はありません', sub, actions);
     return;
   }
 
   const sortSel = document.getElementById('sort-sel');
   const sortBy  = sortSel ? sortSel.value : 'date';
+  const byKeyword = currentTab === 'news' && !inQuick;
 
   const sorted  = [...displayData].sort((a, b) => {
     if (sortBy === 'hot' && currentTab !== 'fav') {
@@ -1637,26 +2026,23 @@ function renderTable() {
     }
     if (sortBy === 'date' || currentTab === 'fav') return b.dt - a.dt;
     // キーワード順 / 出典順
-    const keyA = (currentTab === 'news') ? a.keyword : (a.source || a.keyword || '');
-    const keyB = (currentTab === 'news') ? b.keyword : (b.source || b.keyword || '');
+    const keyA = byKeyword ? a.keyword : (a.source || a.keyword || '');
+    const keyB = byKeyword ? b.keyword : (b.source || b.keyword || '');
     return String(keyA).localeCompare(String(keyB), 'ja') || b.dt - a.dt;
   });
 
   const now = Date.now();
   let currentClusterId = null;
   const unreadCount = sorted.filter(n => !visitedLinks.includes(n.link)).length;
+  // キーワードが1語だけのとき・絞り込み中・クイック検索ではキーワードの札は冗長なので出さない
+  const showKwTag = currentTab === 'news' && !inQuick && selectedKeyword === 'all' && keywords.length > 1;
 
   const rows = sorted.map((n) => {
     const d = n.dt;
     const hasDate = d instanceof Date && !isNaN(d.getTime()) && d.getFullYear() > 2000;
-    const dayStr  = hasDate ? `${d.getMonth()+1}/${d.getDate()}` : '—';
-    const timeStr = hasDate ? `${d.getHours()}:${String(d.getMinutes()).padStart(2, '0')}` : '';
-    const dateLabel = hasDate ? `${dayStr} ${timeStr}` : '—';
     const isNew     = hasDate && (now - d.getTime()) < 3 * 3600 * 1000;
     const isVisited = visitedLinks.includes(n.link);
     const favOn = isFavorite(n.link);
-    const newBadge   = isNew ? '<span class="badge-new">NEW</span>' : '';
-    const visitedBadge = isVisited ? '<span class="badge-visited">既読</span>' : '';
 
     let hotBadge = '';
     if (sortBy === 'hot' && currentTab !== 'fav' && n.topicScore > 1) {
@@ -1664,42 +2050,40 @@ function renderTable() {
        currentClusterId = n.clusterId;
     }
 
-    const tagHtml = (currentTab === 'major')
-      ? `<span class="kw-tag cat-tag">${escapeHtml(n.category || 'その他')}</span>`
-      : `<span class="kw-tag">${escapeHtml(n.keyword || '')}</span>`;
+    let tagHtml = '';
+    if (currentTab === 'major') tagHtml = `<span class="kw-tag cat-tag">${escapeHtml(n.category || 'その他')}</span>`;
+    else if (showKwTag || (currentTab === 'fav' && n.keyword)) tagHtml = `<span class="kw-tag">${escapeHtml(n.keyword || '')}</span>`;
 
     const sourceLabel = n.source || '不明';
     const safeLink   = escapeHtml(n.link);
     const safeTitle  = escapeHtml(n.title);
-    const safeSource = escapeHtml(sourceLabel);
 
-    const metaParts = [
-      `<span class="meta-source">${safeSource}</span>`,
-      `<span class="meta-sep">·</span>`,
-      `<span>${escapeHtml(dateLabel)}</span>`
-    ];
-    if (hotBadge) {
-      metaParts.push(`<span class="meta-sep">·</span>`, hotBadge);
-    }
+    const metaParts = [];
+    if (isNew && !isVisited) metaParts.push('<span class="badge-new">NEW</span>');
+    if (isVisited) metaParts.push('<span class="badge-visited">既読</span>');
+    metaParts.push(`<span class="meta-source">${escapeHtml(sourceLabel)}</span>`);
+    if (hasDate) metaParts.push(`<time datetime="${escapeHtml(d.toISOString())}" title="${escapeHtml(formatFullDate(d))}">${escapeHtml(formatRelativeTime(d))}</time>`);
+    if (tagHtml) metaParts.push(tagHtml);
+    if (hotBadge) metaParts.push(hotBadge);
 
     return `<li class="article-item${isVisited ? ' visited' : ''}">
       <div class="article-row">
-        <button type="button" class="fav-btn${favOn ? ' on' : ''}" aria-label="${favOn ? 'お気に入り解除' : 'お気に入り追加'}" data-link="${safeLink}">${favOn ? '★' : '☆'}</button>
         <a class="article-link js-open-link" href="${safeLink}" target="_blank" rel="noopener noreferrer" data-link="${safeLink}">
-          <div class="article-title-row">
-            ${newBadge}${visitedBadge}${tagHtml}
-            <span class="article-title">${safeTitle}</span>
-          </div>
+          <div class="article-title">${safeTitle}</div>
           <div class="article-meta">${metaParts.join('')}</div>
         </a>
+        <button type="button" class="fav-btn${favOn ? ' on' : ''}" aria-pressed="${favOn}" aria-label="${favOn ? 'お気に入りから外す' : 'お気に入りに保存'}" data-link="${safeLink}">${favOn ? '★' : '☆'}</button>
       </div>
     </li>`;
   }).join('');
 
-  const summary = `<div class="results-summary">${sorted.length}件 · 未読${unreadCount}${formatLastFetch() && currentTab !== 'fav' ? ' · ' + formatLastFetch() : ''}${currentTab === 'fav' ? ' · お気に入り' : ''}</div>`;
+  const summaryParts = [`<strong>${sorted.length}件</strong>`];
+  if (currentTab !== 'fav') summaryParts.push(`未読 ${unreadCount}`);
+  if (formatLastFetch() && currentTab !== 'fav') summaryParts.push(formatLastFetch());
+  resultsSummary = summaryParts.join(' · ');
+  renderStatus();
 
   document.getElementById('results').innerHTML = `
-    ${summary}
     <div class="list-wrap">
       <ul class="article-list">${rows}</ul>
     </div>`;
@@ -1720,9 +2104,28 @@ function renderTable() {
   });
 }
 
+/* ---------- 起動 ---------- */
+
+(() => {
+  const inp = document.getElementById('quick-input');
+  if (!inp) return;
+  inp.addEventListener('focus', () => { quickInputFocused = true; renderQuickRecent(); });
+  inp.addEventListener('blur', () => { quickInputFocused = false; setTimeout(renderQuickRecent, 120); });
+  inp.addEventListener('input', () => { updateQuickClearButton(); renderQuickRecent(); });
+})();
+
+// ?q=語 で開くと、その語のクイック検索から始める（ブックマーク・共有用）
+try {
+  const initialQ = new URLSearchParams(location.search).get('q');
+  if (initialQ && initialQ.trim()) {
+    quickQuery = initialQ.trim();
+    const inp = document.getElementById('quick-input');
+    if (inp) inp.value = quickQuery;
+    updateQuickClearButton();
+  }
+} catch (e) { /* ignore */ }
+
 renderChips();
-renderKeywordGroupBar();
-initMobileFilterSelects();
 saveFavorites();
 if (currentTab === 'news' && activeGroupName && isGroupCacheComplete(activeGroupName)) {
   refreshNewsDisplayFromCache();
@@ -1731,6 +2134,8 @@ switchTab(currentTab);
 scheduleAutoRefresh();
 updateNotifyStatusUI();
 updateFilterSummary();
+// 相対時刻（「5分前」）を古くしない
+setInterval(() => { if (document.visibilityState === 'visible' && !isFetching) renderTable(); }, 60 * 1000);
 document.addEventListener('visibilitychange', () => {
   if (document.visibilityState === 'visible' && !isFetching) {
     const mins = parseInt(localStorage.getItem('myAutoRefreshMin') || '0', 10);
@@ -1740,7 +2145,16 @@ document.addEventListener('visibilitychange', () => {
   }
 });
 document.addEventListener('keydown', (e) => {
-  if (e.key === 'Escape') closeFilterSheet();
+  if (e.key === 'Escape') {
+    closeFilterSheet();
+    if (settingsOpen) toggleSettingsPanel(false);
+  }
+  // 「/」で検索欄へ（PC）
+  if (e.key === '/' && !/^(INPUT|TEXTAREA|SELECT)$/.test(document.activeElement?.tagName || '')) {
+    e.preventDefault();
+    if (currentTab !== 'news') switchTab('news');
+    document.getElementById('quick-input')?.focus();
+  }
 });
 </script>
 </body>

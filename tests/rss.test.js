@@ -192,3 +192,47 @@ test('github.io の画面は本番 API を呼び、それ以外は同一オリ�
   assert.equal(origin('news-rss-brown.vercel.app'), '');
   assert.equal(origin('localhost'), '');
 });
+
+// index.html から関数宣言を1つ取り出す（画面のロジックをブラウザなしで確かめる）
+function extractFunction(html, name) {
+  const m = html.match(new RegExp(`function ${name}\\([^)]*\\) \\{[\\s\\S]*?\\n\\}`));
+  assert.ok(m, `${name} が index.html にあること`);
+  return m[0];
+}
+
+test('クイック検索と登録キーワードの取得は同じ関数で /api/rss を呼ぶ', () => {
+  const html = fs.readFileSync(path.join(__dirname, '..', 'index.html'), 'utf8');
+  const fetchFn = extractFunction(html, 'fetchKeywordItems');
+  assert.match(fetchFn, /type=news/);
+  assert.match(fetchFn, /exclude=/);
+  // 登録キーワードの取得（fetchKeywordsForList）とクイック検索（fetchQuickSearch）の両方がこれを使う
+  assert.match(html, /async function fetchKeywordsForList[\s\S]*?fetchKeywordItems\(kw, fetchCount\)/);
+  assert.match(html, /async function fetchQuickSearch[\s\S]*?fetchKeywordItems\(q, count\)/);
+  // クイック検索の語は登録キーワード（localStorage の myKeywords）へ書き込まない
+  const runFn = extractFunction(html, 'runQuickSearch');
+  assert.doesNotMatch(runFn, /keywords\.push|saveData\(/);
+});
+
+test('記事の日時は「N分前」「N時間前」「昨日」で出す', () => {
+  const html = fs.readFileSync(path.join(__dirname, '..', 'index.html'), 'utf8');
+  const fmt = new Function(`${extractFunction(html, 'formatRelativeTime')}; return formatRelativeTime;`)();
+  const ago = (min) => new Date(Date.now() - min * 60000);
+  assert.equal(fmt(ago(0)), 'たった今');
+  assert.equal(fmt(ago(5)), '5分前');
+  assert.equal(fmt(ago(180)), '3時間前');
+  assert.equal(fmt(new Date('invalid')), '');
+  assert.equal(fmt(new Date(0)), '');
+  const old = new Date(2026, 0, 2, 9, 5);
+  assert.equal(fmt(old), '1/2 9:05');
+});
+
+test('Google と Bing で同じ見出しの記事は1本にまとめる', () => {
+  const html = fs.readFileSync(path.join(__dirname, '..', 'index.html'), 'utf8');
+  const dedupe = new Function(`${extractFunction(html, 'displayTitleForDedup')}; ${extractFunction(html, 'dedupeByTitle')}; return dedupeByTitle;`)();
+  const items = [
+    { title: '【速報】ドローン規制の議論', link: 'https://a' },
+    { title: 'ドローン規制の議論', link: 'https://b' },
+    { title: '別の記事', link: 'https://c' }
+  ];
+  assert.deepEqual(dedupe(items).map(i => i.link), ['https://a', 'https://c']);
+});
