@@ -6,6 +6,9 @@ const PER_FEED_ITEMS = 30;
 const REQUEST_TIMEOUT_MS = 3800;
 const NEWS_TIMEOUT_MS = 8000;
 const USER_AGENT = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36 NewsDashboard/1.0';
+// はてなブックマークはブラウザ風の User-Agent に 403 を返す（2026-09-28、Vercel からもローカル回線からも実測）。
+// 素朴な RSS リーダー名なら 200 が返るため、そのフィードだけこちらを使う
+const RSS_READER_USER_AGENT = 'NewsDashboard/1.0 (+RSS reader)';
 
 const httpsAgent = new https.Agent({ family: 4, keepAlive: true });
 
@@ -100,12 +103,13 @@ function createHandler(httpClient = axios, options = {}) {
       const feedSource = opts.source || '';
       const extractPublisher = !!opts.extractPublisher;
       const timeout = opts.timeout ?? defaultTimeoutMs;
+      const userAgent = opts.userAgent || USER_AGENT;
       try {
         const response = await httpClient.get(url, {
           timeout,
           responseType: 'arraybuffer',
           headers: {
-            'User-Agent': USER_AGENT,
+            'User-Agent': userAgent,
             Accept: 'application/rss+xml, application/xml, text/xml, */*'
           },
           httpsAgent,
@@ -116,7 +120,9 @@ function createHandler(httpClient = axios, options = {}) {
         return entries.slice(0, PER_FEED_ITEMS).map(entry => {
           const titleMatch = entry.match(/<title\b[^>]*>([\s\S]*?)<\/title>/i);
           const linkMatch = entry.match(/<link\b[^>]*>(.*?)<\/link>/i) || entry.match(/<link\b[^>]*href=["']([^"']+)["']/i);
-          const pubDateMatch = entry.match(/<(pubDate|published|updated)>([\s\S]*?)<\/\1>/i);
+          // RSS 1.0（RDF）のはてな・読売は pubDate ではなく dc:date を使う。
+          // 拾い損ねると toPublishedIso が現在時刻を返し、全記事が「たった今」になって一覧の先頭を占める
+          const pubDateMatch = entry.match(/<(pubDate|published|updated|dc:date)>([\s\S]*?)<\/\1>/i);
           if (!titleMatch || !linkMatch) return null;
 
           let link = unwrapLink(decodeHtml(linkMatch[1] || linkMatch[2] || ''));
@@ -176,11 +182,13 @@ function createHandler(httpClient = axios, options = {}) {
       const hatenaQ = keyword || '注目';
       const noteQ = keyword || 'ニュース';
       tasks.push(fetchAndParse(
-        `https://b.hatena.ne.jp/search/tag?q=${encodeURIComponent(hatenaQ)}&mode=rss`,
+        // 旧 `/search/tag?q=...&mode=rss` は `/q/<語>?mode=rss` へ 301 で移った（2026-09-28 実測）。
+        // 旧URLのままだとブラウザ風UAでは 403 になり、リダイレクトも辿れない
+        `https://b.hatena.ne.jp/q/${encodeURIComponent(hatenaQ)}?mode=rss`,
         hatenaQ,
         'ブログ',
         '',
-        { source: 'はてな' }
+        { source: 'はてな', userAgent: RSS_READER_USER_AGENT }
       ));
       tasks.push(fetchAndParse(
         `https://note.com/hashtag/${encodeURIComponent(noteQ)}/rss`,

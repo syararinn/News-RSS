@@ -236,3 +236,52 @@ test('Google と Bing で同じ見出しの記事は1本にまとめる', () => 
   ];
   assert.deepEqual(dedupe(items).map(i => i.link), ['https://a', 'https://c']);
 });
+
+test('はてなは /q/ のURLと素朴なUAで呼ぶ（ブラウザ風UAは403になる）', async () => {
+  const calls = [];
+  const client = {
+    async get(url, opts) {
+      calls.push({ url, ua: opts.headers['User-Agent'] });
+      return { data: Buffer.from('<rss><channel></channel></rss>'), headers: { 'content-type': 'application/xml' } };
+    }
+  };
+  const handler = createHandler(client, { defaultTimeoutMs: 40 });
+  await handler({ query: { type: 'social', keyword: '政治', count: '20' } }, mockRes());
+
+  const hatena = calls.find(c => c.url.includes('b.hatena.ne.jp'));
+  assert.ok(hatena, 'はてなを取りに行くこと');
+  assert.ok(hatena.url.includes('/q/'), '移設後の /q/ を使うこと: ' + hatena.url);
+  assert.ok(!hatena.url.includes('/search/tag'), '旧URLを使わないこと');
+  assert.ok(!hatena.ua.includes('Mozilla'), 'ブラウザ風UAを送らないこと: ' + hatena.ua);
+
+  // note は従来どおりブラウザ風UAのまま（変えると壊れうるので巻き込まない）
+  const note = calls.find(c => c.url.includes('note.com'));
+  assert.ok(note.ua.includes('Mozilla'), 'note のUAは変えないこと');
+});
+
+test('dc:date（RSS 1.0）の日付を published に反映する', async () => {
+  const rdf = `<?xml version="1.0" encoding="utf-8"?>
+<rdf:RDF xmlns:dc="http://purl.org/dc/elements/1.1/">
+<items><rdf:Seq><rdf:li rdf:resource="https://example.com/a" /></rdf:Seq></items>
+<item rdf:about="https://example.com/a">
+  <title>はてなの記事</title>
+  <link>https://example.com/a</link>
+  <dc:date>2026-09-22T10:52:13Z</dc:date>
+</item>
+</rdf:RDF>`;
+  const client = {
+    async get(url) {
+      if (String(url).includes('b.hatena.ne.jp')) {
+        return { data: Buffer.from(rdf), headers: { 'content-type': 'application/xml' } };
+      }
+      return { data: Buffer.from('<rss><channel></channel></rss>'), headers: { 'content-type': 'application/xml' } };
+    }
+  };
+  const handler = createHandler(client, { defaultTimeoutMs: 40 });
+  const res = mockRes();
+  await handler({ query: { type: 'social', count: '20' } }, res);
+
+  assert.equal(res.body.length, 1, '<items> のSeqを記事と誤認しないこと');
+  assert.equal(res.body[0].title, 'はてなの記事');
+  assert.equal(res.body[0].published, '2026-09-22T10:52:13.000Z');
+});
